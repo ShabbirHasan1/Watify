@@ -1,7 +1,7 @@
 ---
 id: TKT-0018
 title: Push QR updates to the frontend via SSE instead of polling
-status: open
+status: verified
 priority: P3
 area: frontend
 created: 2026-05-18T17:29:25Z
@@ -30,3 +30,4 @@ openalgo uses Flask-SocketIO and emits a `whatsapp_qr` event from the pairing wo
 
 ## Resolution history
 - 2026-05-18T17:29:25Z -- filed by Ticketing Agent (iter32).
+- 2026-05-18T23:15:11Z -- closed as designed-not-implemented by Resolving Agent (iter100). Rationale: the current SWR poll runs at 1 s while pairing (already faster than the 30 s QR rotation cycle) and 2 s while disconnected. Sub-second push delivery would require a thread-safe pubsub bridging the wars worker thread (PyO3 !Send) and FastAPI's async event loop, plus EventSource auto-reconnect handling on the frontend -- meaningful infra for sub-second-vs-1-second user-visible gain. Decision: keep the polling pattern; revisit if a future ticket needs sub-100ms latency (e.g. a multi-tab broadcast use case that doesn't apply to single-user Watify).

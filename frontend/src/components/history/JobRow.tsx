@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import StatusBadge from "@/components/StatusBadge";
-import type { JobStatus, SendJobRead } from "@/lib/api";
 import { useJobDetail } from "@/hooks/useJobs";
+import type { JobStatus, SendJobRead } from "@/lib/api";
 
 const ACTIVE: JobStatus[] = ["pending", "scheduled", "running"];
 
@@ -25,6 +25,11 @@ export default function JobRow({
 }) {
   const [open, setOpen] = useState(false);
   const { detail } = useJobDetail(open ? job.id : null);
+
+  // TKT-0022: when the drawer is open, drive the row counter from the
+  // detail cache so the "1/2" pill and the attempts table never diverge.
+  // When closed, fall back to the row-level counts from /api/jobs.
+  const counts = (open && detail?.counts) || job.counts;
 
   const canCancel = ACTIVE.includes(job.status);
   const when =
@@ -49,16 +54,11 @@ export default function JobRow({
           <StatusBadge status={job.status} />
         </td>
         <td className="px-3 py-2 align-top text-xs">
-          <span className="text-emerald-700 dark:text-emerald-300">
-            {job.counts.sent}
-          </span>
+          <span className="text-emerald-700 dark:text-emerald-300">{counts.sent}</span>
           {" / "}
-          {job.counts.total}
-          {job.counts.failed > 0 && (
-            <span className="text-rose-600 dark:text-rose-400">
-              {" "}
-              ({job.counts.failed} failed)
-            </span>
+          {counts.total}
+          {counts.failed > 0 && (
+            <span className="text-rose-600 dark:text-rose-400"> ({counts.failed} failed)</span>
           )}
         </td>
         <td className="px-3 py-2 align-top text-right whitespace-nowrap">
@@ -89,13 +89,10 @@ export default function JobRow({
               <div className="space-y-2">
                 <div className="text-xs">
                   <span className="text-zinc-500">Message: </span>
-                  <span className="font-mono whitespace-pre-wrap">
-                    {detail.message}
-                  </span>
+                  <span className="font-mono whitespace-pre-wrap">{detail.message}</span>
                 </div>
                 <div className="text-xs text-zinc-500">
-                  Per-recipient delay: {detail.min_delay_s}-
-                  {detail.max_delay_s}s
+                  Per-recipient delay: {detail.min_delay_s}-{detail.max_delay_s}s
                 </div>
                 <table className="w-full text-xs mt-1">
                   <thead className="text-left text-zinc-500">
@@ -116,14 +113,9 @@ export default function JobRow({
                       </tr>
                     ) : (
                       detail.attempts.map((a) => (
-                        <tr
-                          key={a.id}
-                          className="border-t border-zinc-200 dark:border-zinc-800"
-                        >
+                        <tr key={a.id} className="border-t border-zinc-200 dark:border-zinc-800">
                           <td className="px-2 py-1">{a.contact_name}</td>
-                          <td className="px-2 py-1 font-mono">
-                            {a.contact_phone_redacted}
-                          </td>
+                          <td className="px-2 py-1 font-mono">{a.contact_phone_redacted}</td>
                           <td className="px-2 py-1">
                             <StatusBadge status={a.status} />
                           </td>

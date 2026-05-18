@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ApiError, GROUP_MAX, type BulkRejectedReason } from "@/lib/api";
+import { ApiError, type BulkRejectedReason, GROUP_MAX } from "@/lib/api";
 
 type Row = { name: string; phone: string };
 
@@ -29,9 +29,7 @@ export default function BulkAddModal({
   open: boolean;
   onClose: () => void;
   remaining: number;
-  onSubmit: (
-    rows: Row[]
-  ) => Promise<{ inserted: number; skipped: number }>;
+  onSubmit: (rows: Row[]) => Promise<{ inserted: number; skipped: number }>;
 }) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,8 +45,7 @@ export default function BulkAddModal({
 
   if (!open) return null;
 
-  const canSubmit =
-    rows.length > 0 && !tooMany && !tooManyForGroup && !busy;
+  const canSubmit = rows.length > 0 && !tooMany && !tooManyForGroup && !busy;
 
   async function submit() {
     setBusy(true);
@@ -111,9 +108,7 @@ export default function BulkAddModal({
             <span>
               {rows.length} row{rows.length === 1 ? "" : "s"} parsed
             </span>
-            <span>
-              Remaining slots in this group: {remaining}
-            </span>
+            <span>Remaining slots in this group: {remaining}</span>
           </div>
 
           {tooMany && (

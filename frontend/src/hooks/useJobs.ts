@@ -2,21 +2,15 @@
 
 import useSWR, { mutate } from "swr";
 import { toast } from "@/components/Toaster";
-import {
-  jobs,
-  type SendJobDetail,
-  type SendJobRead,
-  type SendRequest,
-} from "@/lib/api";
+import { jobs, type SendJobDetail, type SendJobRead, type SendRequest } from "@/lib/api";
 
 const LIST_KEY = "/api/jobs";
 
 export function useJobs() {
-  const { data, error, isLoading } = useSWR<SendJobRead[]>(
-    LIST_KEY,
-    () => jobs.list(),
-    { refreshInterval: 3000, revalidateOnFocus: false }
-  );
+  const { data, error, isLoading } = useSWR<SendJobRead[]>(LIST_KEY, () => jobs.list(), {
+    refreshInterval: 3000,
+    revalidateOnFocus: false,
+  });
 
   async function createSend(body: SendRequest): Promise<SendJobRead> {
     const job = await jobs.create(body);
@@ -44,19 +38,14 @@ export function useJobs() {
 
 export function useJobDetail(id: number | null) {
   const key = id == null ? null : `/api/jobs/${id}`;
-  const { data, error, isLoading } = useSWR<SendJobDetail>(
-    key,
-    () => jobs.get(id!),
-    {
-      refreshInterval: (latest) => {
-        const phase = (latest as SendJobDetail | undefined)?.status;
-        if (phase === "running" || phase === "pending" || phase === "scheduled")
-          return 2000;
-        return 0;
-      },
-      revalidateOnFocus: false,
-    }
-  );
+  const { data, error, isLoading } = useSWR<SendJobDetail>(key, () => jobs.get(id!), {
+    refreshInterval: (latest) => {
+      const phase = (latest as SendJobDetail | undefined)?.status;
+      if (phase === "running" || phase === "pending" || phase === "scheduled") return 2000;
+      return 0;
+    },
+    revalidateOnFocus: false,
+  });
 
   return {
     detail: data,

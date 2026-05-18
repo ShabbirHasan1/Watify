@@ -1,7 +1,7 @@
 ---
 id: TKT-0042
 title: ARIA labels and accessibility audit pass on the frontend
-status: open
+status: verified
 priority: P3
 area: frontend
 created: 2026-05-18T22:53:00Z

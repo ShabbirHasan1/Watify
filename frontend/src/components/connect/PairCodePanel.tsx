@@ -19,6 +19,7 @@ export default function PairCodePanel({ code }: { code: string | null }) {
         {code ? (
           <div
             className="rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 px-6 py-5 text-center font-mono text-3xl tracking-widest"
+            role="img"
             aria-label="Pair code"
           >
             {formatChunks(code)}
@@ -30,7 +31,8 @@ export default function PairCodePanel({ code }: { code: string | null }) {
         )}
       </div>
       <p className="mt-3 text-xs text-zinc-500 text-center">
-        Codes expire after a short time. If the code does not work, disconnect and start pair-code mode again.
+        Codes expire after a short time. If the code does not work, disconnect and start pair-code
+        mode again.
       </p>
     </div>
   );

@@ -1,23 +1,11 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import { mutate } from "swr";
 import { ApiError, auth } from "@/lib/api";
-
-// TKT-0029: honor the `?next=` query param post-login, but only when
-// it is a same-origin path. Anything else (absolute URLs, protocol-
-// relative `//evil.com`, paths with `:` that browsers interpret as a
-// scheme, or non-strings) falls back to the safe default.
-function safeNextPath(raw: string | null): string {
-  const fallback = "/dashboard";
-  if (typeof raw !== "string") return fallback;
-  if (!raw.startsWith("/")) return fallback;     // must be a path
-  if (raw.startsWith("//")) return fallback;     // protocol-relative
-  if (raw.includes(":")) return fallback;        // would-be scheme
-  return raw;
-}
+import { safeNextPath } from "@/lib/safeNextPath";
 
 type ErrorState =
   | null
@@ -165,7 +153,8 @@ function ErrorPanel({ state }: { state: NonNullable<ErrorState> }) {
       body = `Too many attempts, try again in ${state.retryAfter} seconds.`;
       break;
     case "not_configured":
-      body = "Auth is not configured on the backend. Set WATIFY_APP_SECRET in backend/.env and restart.";
+      body =
+        "Auth is not configured on the backend. Set WATIFY_APP_SECRET in backend/.env and restart.";
       break;
     case "validation":
     case "generic":

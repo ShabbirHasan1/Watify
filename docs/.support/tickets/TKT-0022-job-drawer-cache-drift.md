@@ -1,7 +1,7 @@
 ---
 id: TKT-0022
 title: Job drawer attempts list lags the progress counter while running
-status: open
+status: verified
 priority: P3
 area: frontend
 created: 2026-05-19T00:08:00Z

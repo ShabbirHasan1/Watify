@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PairCodePanel from "@/components/connect/PairCodePanel";
 import RequireAuth from "@/components/RequireAuth";
 import { toast } from "@/components/Toaster";
-import { ApiError, wa } from "@/lib/api";
 import { useWaState } from "@/hooks/useWaState";
+import { ApiError, wa } from "@/lib/api";
 
 const AUTO_FLAG = "watify.autopair.started";
 
@@ -138,9 +138,7 @@ function ConnectInner() {
         </p>
       </header>
 
-      {isLoading && !waState ? (
-        <PanelMuted>Checking backend...</PanelMuted>
-      ) : null}
+      {isLoading && !waState ? <PanelMuted>Checking backend...</PanelMuted> : null}
 
       {waState?.state !== "ready" && waState?.state !== "error" ? (
         <ModeSwitch mode={mode} onChange={(m) => handleModeChange(m)} />
@@ -172,10 +170,7 @@ function ConnectInner() {
       ) : null}
 
       {waState?.state === "pairing" && mode === "qr" ? (
-        <PairingPanel
-          qrDataUrl={waState.qr_data_url}
-          lastEventAt={waState.last_event_at}
-        />
+        <PairingPanel qrDataUrl={waState.qr_data_url} lastEventAt={waState.last_event_at} />
       ) : null}
 
       {waState?.state === "pairing" && mode === "code" ? (
@@ -183,17 +178,11 @@ function ConnectInner() {
       ) : null}
 
       {waState?.state === "ready" ? (
-        <ReadyPanel
-          ownerPhone={waState.owner_phone}
-          onDisconnect={() => handleDisconnect()}
-        />
+        <ReadyPanel ownerPhone={waState.owner_phone} onDisconnect={() => handleDisconnect()} />
       ) : null}
 
       {waState?.state === "error" ? (
-        <ErrorPanel
-          message={waState.last_error}
-          onRetry={() => handleManualConnect()}
-        />
+        <ErrorPanel message={waState.last_error} onRetry={() => handleManualConnect()} />
       ) : null}
     </div>
   );
@@ -207,21 +196,18 @@ function PanelMuted({ children }: { children: React.ReactNode }) {
   );
 }
 
-function ModeSwitch({
-  mode,
-  onChange,
-}: {
-  mode: Mode;
-  onChange: (m: Mode) => void;
-}) {
-  const base =
-    "px-3 py-1.5 text-sm font-medium transition border";
+function ModeSwitch({ mode, onChange }: { mode: Mode; onChange: (m: Mode) => void }) {
+  const base = "px-3 py-1.5 text-sm font-medium transition border";
   const active =
     "bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100";
   const idle =
     "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800";
   return (
-    <div className="inline-flex rounded-md overflow-hidden" role="tablist" aria-label="Pairing mode">
+    <div
+      className="inline-flex rounded-md overflow-hidden"
+      role="tablist"
+      aria-label="Pairing mode"
+    >
       <button
         type="button"
         role="tab"
@@ -261,7 +247,8 @@ function PairCodeStarter({
     <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
       <h2 className="text-base font-semibold">Pair with a code</h2>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-        Enter the phone number you will type the code on. WhatsApp will display "Link with phone number" on Linked devices.
+        Enter the phone number you will type the code on. WhatsApp will display "Link with phone
+        number" on Linked devices.
       </p>
       <form
         onSubmit={(e) => {
@@ -382,8 +369,9 @@ function PairingPanel({
         {label}
       </div>
       <p className="mt-2 text-xs text-zinc-500 text-center">
-        WhatsApp rotates this code every {QR_LIFETIME_S} seconds. The page updates automatically.
-        If your phone says &quot;can&apos;t connect&quot;, the QR likely expired -- wait for the next one.
+        WhatsApp rotates this code every {QR_LIFETIME_S} seconds. The page updates automatically. If
+        your phone says &quot;can&apos;t connect&quot;, the QR likely expired -- wait for the next
+        one.
       </p>
     </div>
   );
@@ -475,18 +463,10 @@ function ReadyPanel({
   );
 }
 
-function ErrorPanel({
-  message,
-  onRetry,
-}: {
-  message: string | null;
-  onRetry: () => void;
-}) {
+function ErrorPanel({ message, onRetry }: { message: string | null; onRetry: () => void }) {
   return (
     <div className="rounded-lg border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950 p-6">
-      <h2 className="text-base font-semibold text-rose-900 dark:text-rose-200">
-        Pairing failed
-      </h2>
+      <h2 className="text-base font-semibold text-rose-900 dark:text-rose-200">Pairing failed</h2>
       <p className="mt-1 text-sm text-rose-800 dark:text-rose-300 break-all">
         {message ?? "Unknown error."}
       </p>

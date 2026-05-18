@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BulkAddModal from "@/components/groups/BulkAddModal";
 import EmptyState from "@/components/EmptyState";
+import BulkAddModal from "@/components/groups/BulkAddModal";
 import RequireAuth from "@/components/RequireAuth";
-import { ApiError, GROUP_MAX } from "@/lib/api";
 import { useGroupDetail } from "@/hooks/useGroupDetail";
 import { useGroups } from "@/hooks/useGroups";
+import { ApiError, GROUP_MAX } from "@/lib/api";
 
 export default function GroupsPage() {
   return (
@@ -39,9 +39,7 @@ function GroupsInner() {
       setSelectedId(g.id);
     } catch (e) {
       if (e instanceof ApiError) {
-        setCreateError(
-          e.status === 409 ? "A group with that name already exists." : e.message
-        );
+        setCreateError(e.status === 409 ? "A group with that name already exists." : e.message);
       } else {
         setCreateError("Could not create the group.");
       }
@@ -93,7 +91,10 @@ function GroupsInner() {
             </ul>
           )}
 
-          <form onSubmit={onCreate} className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2">
+          <form
+            onSubmit={onCreate}
+            className="pt-3 border-t border-zinc-200 dark:border-zinc-800 space-y-2"
+          >
             <label
               htmlFor="new-group"
               className="block text-xs uppercase tracking-wide text-zinc-500"
@@ -116,9 +117,7 @@ function GroupsInner() {
                 Create
               </button>
             </div>
-            {createError && (
-              <p className="text-xs text-rose-600">{createError}</p>
-            )}
+            {createError && <p className="text-xs text-rose-600">{createError}</p>}
           </form>
         </aside>
 
@@ -150,8 +149,7 @@ function GroupDetailPanel({
   groupId: number;
   onDelete: () => Promise<void>;
 }) {
-  const { detail, isLoading, addContact, removeContact, bulkAddContacts } =
-    useGroupDetail(groupId);
+  const { detail, isLoading, addContact, removeContact, bulkAddContacts } = useGroupDetail(groupId);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [rowErr, setRowErr] = useState<string | null>(null);
@@ -217,9 +215,7 @@ function GroupDetailPanel({
         className="flex flex-wrap items-end gap-2 rounded-md border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 p-3"
       >
         <div className="flex-1 min-w-[140px]">
-          <label className="block text-xs uppercase tracking-wide text-zinc-500">
-            Name
-          </label>
+          <label className="block text-xs uppercase tracking-wide text-zinc-500">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -230,9 +226,7 @@ function GroupDetailPanel({
           />
         </div>
         <div className="flex-1 min-w-[180px]">
-          <label className="block text-xs uppercase tracking-wide text-zinc-500">
-            Phone
-          </label>
+          <label className="block text-xs uppercase tracking-wide text-zinc-500">Phone</label>
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -276,9 +270,7 @@ function GroupDetailPanel({
               detail.contacts.map((c) => (
                 <tr key={c.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-950">
                   <td className="px-3 py-2">{c.name}</td>
-                  <td className="px-3 py-2 font-mono text-xs">
-                    {c.phone_e164}
-                  </td>
+                  <td className="px-3 py-2 font-mono text-xs">{c.phone_e164}</td>
                   <td className="px-3 py-2 text-right">
                     <button
                       type="button"

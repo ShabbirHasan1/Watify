@@ -1,7 +1,7 @@
 ---
 id: TKT-0041
 title: Biome lint + format on the frontend tree
-status: open
+status: verified
 priority: P3
 area: frontend
 created: 2026-05-18T22:53:00Z

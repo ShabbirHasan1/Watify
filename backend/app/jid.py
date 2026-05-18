@@ -43,3 +43,38 @@ def redact_phone(phone: str) -> str:
     if len(digits) <= 4:
         return "X" * len(digits)
     return f"{digits[:2]}{'X' * (len(digits) - 6)}{digits[-4:]}"
+
+
+# TKT-0017: explicit JID helpers so callers don't hand-stitch
+# `<digits>@s.whatsapp.net` everywhere. wars uses these JIDs internally
+# for 1:1 chats; group JIDs end in `@g.us` and are not supported by
+# Watify (single-user, friends-list app).
+
+JID_SUFFIX = "@s.whatsapp.net"
+
+
+def phone_to_jid(phone: str) -> str:
+    """Normalize a phone to digits and append the WhatsApp 1:1 JID suffix.
+
+    Raises InvalidPhoneError if the input cannot be normalized.
+    """
+    return f"{normalize_phone(phone)}{JID_SUFFIX}"
+
+
+def jid_to_phone(jid: str) -> str:
+    """Extract the bare-digits phone from a WhatsApp 1:1 JID.
+
+    Tolerates the optional `:NN` device-suffix wars sometimes carries on
+    the sender field. Raises InvalidPhoneError when the JID is malformed
+    or carries a non-1:1 suffix (e.g. group `@g.us`).
+    """
+    if not jid or not isinstance(jid, str):
+        raise InvalidPhoneError("jid is required")
+    if JID_SUFFIX not in jid:
+        raise InvalidPhoneError(
+            f"jid must end in {JID_SUFFIX} (got {jid!r})"
+        )
+    local = jid.split(JID_SUFFIX, 1)[0]
+    # Strip optional `:device` suffix.
+    local = local.split(":", 1)[0]
+    return normalize_phone(local)

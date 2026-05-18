@@ -2,11 +2,7 @@
 
 import useSWR, { mutate } from "swr";
 import { toast } from "@/components/Toaster";
-import {
-  groups,
-  type BulkContactsResponse,
-  type FriendGroupDetail,
-} from "@/lib/api";
+import { type BulkContactsResponse, type FriendGroupDetail, groups } from "@/lib/api";
 
 function key(id: number | null) {
   return id == null ? null : `/api/groups/${id}`;
@@ -14,11 +10,10 @@ function key(id: number | null) {
 
 export function useGroupDetail(id: number | null) {
   const k = key(id);
-  const { data, error, isLoading } = useSWR<FriendGroupDetail>(
-    k,
-    () => groups.get(id!),
-    { revalidateOnFocus: false, refreshInterval: 0 }
-  );
+  const { data, error, isLoading } = useSWR<FriendGroupDetail>(k, () => groups.get(id!), {
+    revalidateOnFocus: false,
+    refreshInterval: 0,
+  });
 
   async function addContact(name: string, phone: string) {
     if (id == null) throw new Error("no group selected");

@@ -1,7 +1,7 @@
 ---
 id: TKT-0044
 title: Supabase-style dark theme overhaul (hero + global)
-status: open
+status: verified
 priority: P2
 area: frontend
 created: 2026-05-18T22:56:00Z

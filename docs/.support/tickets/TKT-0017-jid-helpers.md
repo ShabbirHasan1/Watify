@@ -1,7 +1,7 @@
 ---
 id: TKT-0017
 title: Add explicit phone_to_jid / jid_to_phone helpers
-status: open
+status: verified
 priority: P3
 area: backend
 created: 2026-05-18T17:29:25Z

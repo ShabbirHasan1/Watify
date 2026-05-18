@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useHealth } from "@/hooks/useHealth";
 
 const links = [
   { href: "/dashboard", label: "Dashboard" },
@@ -15,6 +17,9 @@ const links = [
 
 export default function TopNav() {
   const { user, isLoading, logout } = useAuth();
+  const { health } = useHealth();
+  // TKT-0046: hide Get started once the single admin is registered.
+  const registered = health?.registered === true;
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -30,7 +35,10 @@ export default function TopNav() {
 
   return (
     <header className="border-b border-zinc-200 dark:border-zinc-800 bg-white/80 dark:bg-zinc-950/80 backdrop-blur">
-      <nav className="mx-auto max-w-6xl flex items-center gap-1 px-4 h-14">
+      <nav
+        aria-label="Main navigation"
+        className="mx-auto max-w-6xl flex items-center gap-1 px-4 h-14"
+      >
         <Link
           href={user ? "/dashboard" : "/"}
           className="text-base font-semibold tracking-tight mr-4"
@@ -57,9 +65,8 @@ export default function TopNav() {
               ))}
             </ul>
             <div className="ml-auto flex items-center gap-3 text-sm">
-              <span className="text-zinc-600 dark:text-zinc-400">
-                {user.username}
-              </span>
+              <ThemeToggle />
+              <span className="text-zinc-600 dark:text-zinc-400">{user.username}</span>
               <button
                 type="button"
                 onClick={onLogout}
@@ -72,18 +79,21 @@ export default function TopNav() {
           </>
         ) : (
           <div className="ml-auto flex items-center gap-2 text-sm">
+            <ThemeToggle />
             <Link
               href="/login"
               className="px-3 py-1.5 rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
             >
               Sign in
             </Link>
-            <Link
-              href="/register"
-              className="rounded bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 px-3 py-1.5 text-sm font-medium"
-            >
-              Get started
-            </Link>
+            {!registered ? (
+              <Link
+                href="/register"
+                className="rounded bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 px-3 py-1.5 text-sm font-medium"
+              >
+                Get started
+              </Link>
+            ) : null}
           </div>
         )}
       </nav>

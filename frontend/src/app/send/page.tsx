@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
 import RequireAuth from "@/components/RequireAuth";
+import { useGroups } from "@/hooks/useGroups";
+import { useJobs } from "@/hooks/useJobs";
 import {
   ApiError,
   DEFAULT_MAX_DELAY_S,
@@ -11,8 +13,6 @@ import {
   MAX_DELAY_S,
   type SendJobRead,
 } from "@/lib/api";
-import { useGroups } from "@/hooks/useGroups";
-import { useJobs } from "@/hooks/useJobs";
 
 type Mode = "now" | "schedule";
 
@@ -59,8 +59,7 @@ function SendInner() {
     [groups, groupId]
   );
 
-  const rangeError =
-    minDelay > maxDelay ? "Min delay must be <= max delay." : null;
+  const rangeError = minDelay > maxDelay ? "Min delay must be <= max delay." : null;
   const canSubmit =
     !submitting &&
     selectedGroup != null &&
@@ -121,9 +120,7 @@ function SendInner() {
         className="space-y-5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5"
       >
         <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-zinc-500">
-            Group
-          </label>
+          <label className="block text-xs uppercase tracking-wide text-zinc-500">Group</label>
           {groupsLoading && groups.length === 0 ? (
             <p className="text-sm text-zinc-500">Loading groups...</p>
           ) : groups.length === 0 ? (
@@ -142,9 +139,7 @@ function SendInner() {
           ) : (
             <select
               value={groupId === "" ? "" : String(groupId)}
-              onChange={(e) =>
-                setGroupId(e.target.value === "" ? "" : Number(e.target.value))
-              }
+              onChange={(e) => setGroupId(e.target.value === "" ? "" : Number(e.target.value))}
               className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-2 py-1.5 text-sm"
             >
               {groups.map((g) => (
@@ -167,9 +162,7 @@ function SendInner() {
         </div>
 
         <div className="space-y-1">
-          <label className="block text-xs uppercase tracking-wide text-zinc-500">
-            Message
-          </label>
+          <label className="block text-xs uppercase tracking-wide text-zinc-500">Message</label>
           <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
@@ -178,21 +171,13 @@ function SendInner() {
             placeholder="Type the message you want to broadcast..."
             className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
           />
-          <div className="text-xs text-zinc-500 text-right">
-            {message.length} / 4096
-          </div>
+          <div className="text-xs text-zinc-500 text-right">{message.length} / 4096</div>
         </div>
 
         <div className="space-y-2">
-          <label className="block text-xs uppercase tracking-wide text-zinc-500">
-            When
-          </label>
+          <label className="block text-xs uppercase tracking-wide text-zinc-500">When</label>
           <div className="flex items-center gap-3">
-            <ModeButton
-              active={mode === "now"}
-              onClick={() => setMode("now")}
-              label="Send Now"
-            />
+            <ModeButton active={mode === "now"} onClick={() => setMode("now")} label="Send Now" />
             <ModeButton
               active={mode === "schedule"}
               onClick={() => setMode("schedule")}
@@ -231,12 +216,10 @@ function SendInner() {
             />
           </div>
           <p className="text-xs text-zinc-500">
-            Each recipient gets a random delay between {minDelay} and {maxDelay}{" "}
-            seconds before its send. One message at a time.
+            Each recipient gets a random delay between {minDelay} and {maxDelay} seconds before its
+            send. One message at a time.
           </p>
-          {rangeError && (
-            <p className="text-xs text-rose-600">{rangeError}</p>
-          )}
+          {rangeError && <p className="text-xs text-rose-600">{rangeError}</p>}
         </div>
 
         {error && (
@@ -258,11 +241,7 @@ function SendInner() {
             disabled={!canSubmit}
             className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:bg-zinc-300 dark:disabled:bg-zinc-700 disabled:cursor-not-allowed"
           >
-            {submitting
-              ? "Submitting..."
-              : mode === "now"
-                ? "Send Now"
-                : "Schedule send"}
+            {submitting ? "Submitting..." : mode === "now" ? "Send Now" : "Schedule send"}
           </button>
         </div>
       </form>
@@ -274,10 +253,7 @@ function SendInner() {
             <span className="font-medium">{created.status}</span>).
           </p>
           <p className="mt-1">
-            <Link
-              href="/history"
-              className="underline text-emerald-700 dark:text-emerald-300"
-            >
+            <Link href="/history" className="underline text-emerald-700 dark:text-emerald-300">
               View in History
             </Link>
           </p>

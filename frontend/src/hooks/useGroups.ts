@@ -2,16 +2,15 @@
 
 import useSWR, { mutate } from "swr";
 import { toast } from "@/components/Toaster";
-import { groups, type FriendGroupRead } from "@/lib/api";
+import { type FriendGroupRead, groups } from "@/lib/api";
 
 const LIST_KEY = "/api/groups";
 
 export function useGroups() {
-  const { data, error, isLoading } = useSWR<FriendGroupRead[]>(
-    LIST_KEY,
-    () => groups.list(),
-    { revalidateOnFocus: false, refreshInterval: 0 }
-  );
+  const { data, error, isLoading } = useSWR<FriendGroupRead[]>(LIST_KEY, () => groups.list(), {
+    revalidateOnFocus: false,
+    refreshInterval: 0,
+  });
 
   async function createGroup(name: string): Promise<FriendGroupRead> {
     const g = await groups.create(name);

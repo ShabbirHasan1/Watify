@@ -21,10 +21,7 @@ function DashboardInner() {
   const { list: jobs } = useJobs();
 
   const { stats, sent24h } = useMemo(() => {
-    const totalContacts = groups.reduce(
-      (s, g) => s + (g.contact_count ?? 0),
-      0
-    );
+    const totalContacts = groups.reduce((s, g) => s + (g.contact_count ?? 0), 0);
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
@@ -68,9 +65,7 @@ function DashboardInner() {
             key={s.label}
             className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4"
           >
-            <div className="text-xs uppercase tracking-wide text-zinc-500">
-              {s.label}
-            </div>
+            <div className="text-xs uppercase tracking-wide text-zinc-500">{s.label}</div>
             <div className="mt-1 text-lg font-medium">{s.value}</div>
           </div>
         ))}

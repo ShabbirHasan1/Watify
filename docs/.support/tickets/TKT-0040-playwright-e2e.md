@@ -1,7 +1,7 @@
 ---
 id: TKT-0040
 title: Playwright e2e tests for login -> dashboard -> groups happy path
-status: open
+status: verified
 priority: P2
 area: frontend
 created: 2026-05-18T22:53:00Z

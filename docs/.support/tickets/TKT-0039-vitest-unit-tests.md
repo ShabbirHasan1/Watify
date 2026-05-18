@@ -1,7 +1,7 @@
 ---
 id: TKT-0039
 title: Vitest unit tests for frontend helpers and stores
-status: open
+status: verified
 priority: P2
 area: frontend
 created: 2026-05-18T22:53:00Z

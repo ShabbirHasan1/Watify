@@ -100,7 +100,17 @@ def _import_wars() -> Any:
 
 log = logging.getLogger(__name__)
 
-State = Literal["disconnected", "pairing", "ready", "error"]
+# TKT-0016: `paired` is an interim state distinct from `ready`. In a
+# protocol where the linked-devices handshake completes BEFORE the
+# initial chat-history sync, `paired` would be the post-handshake,
+# pre-sync moment and `ready` would be the post-sync, send-eligible
+# state. wars 0.1.3 does not expose a separate sync-complete signal,
+# so the runtime currently collapses to `ready` once on_connected
+# fires AND wa.is_connected() returns True (see _check_connected).
+# The `paired` literal is reserved so callers can pattern-match on it
+# in a forward-compatible way; nothing in this module produces it
+# today.
+State = Literal["disconnected", "pairing", "paired", "ready", "error"]
 
 DB_PATH = Path(settings.whatsapp_db).resolve()
 

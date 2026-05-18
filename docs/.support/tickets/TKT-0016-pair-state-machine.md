@@ -1,7 +1,7 @@
 ---
 id: TKT-0016
 title: Distinguish `paired` from `ready` in the wa state machine
-status: open
+status: verified
 priority: P3
 area: backend
 created: 2026-05-18T17:29:25Z

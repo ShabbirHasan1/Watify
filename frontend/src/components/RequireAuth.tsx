@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 
 // TKT-0029: client-side route guard. The spec prefers a server-side
@@ -25,11 +25,7 @@ export default function RequireAuth({ children }: { children: React.ReactNode })
   }, [isLoading, user, pathname, router]);
 
   if (isLoading || !user) {
-    return (
-      <div className="text-sm text-zinc-500 dark:text-zinc-400">
-        Loading...
-      </div>
-    );
+    return <div className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</div>;
   }
 
   return <>{children}</>;

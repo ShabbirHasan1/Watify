@@ -21,9 +21,7 @@ function HistoryInner() {
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Send History
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Send History</h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
             Recent send jobs and per-recipient delivery.
           </p>

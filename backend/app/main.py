@@ -7,10 +7,13 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from sqlmodel import Session
+
 from app import __version__
+from app import auth_repo
 from app.auth_middleware import AuthMiddleware
 from app.csrf_middleware import CSRFMiddleware
-from app.db import init_db
+from app.db import engine, init_db
 from app.identity import fingerprint as app_fingerprint
 from app.identity import is_configured as identity_configured
 from app.limiter import limiter, rate_limit_handler
@@ -125,10 +128,23 @@ app.include_router(jobs.router)
 
 @app.get("/api/health")
 def health() -> dict[str, object]:
+    # TKT-0046: tell the frontend whether registration is closed so the
+    # hero + TopNav can hide the "Get started" CTA once the single user
+    # is set up. Null when auth is unconfigured (app_secret empty).
+    registered: bool | None
+    if not settings.app_secret:
+        registered = None
+    else:
+        try:
+            with Session(engine) as s:
+                registered = auth_repo.count_users(s) > 0
+        except Exception:  # noqa: BLE001
+            registered = None
     return {
         "ok": True,
         "service": "watify",
         "version": __version__,
+        "registered": registered,
         # TKT-0031: stable 8-char identifier for the installed app_secret.
         # Null when unconfigured so the operator can spot the missing
         # secret with one curl. The full secret never leaves the box.

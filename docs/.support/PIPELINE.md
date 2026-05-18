@@ -3,23 +3,23 @@
 This file is the single source of truth for "what runs next". Each loop iteration reads this, executes one chunk as the named agent, then updates this file.
 
 ```yaml
-phase: ticketing
-agent: ticketing_agent
-iteration: 98
-last_updated: 2026-05-18T23:04:00Z
-last_conversation: docs/.support/conversations/2026-05-18T230400Z-resolving_agent-iter98.md
+phase: done
+agent: none
+iteration: 100
+last_updated: 2026-05-18T23:20:00Z
+last_conversation: docs/.support/conversations/2026-05-18T231511Z-resolving_agent-iter100.md
 servers:
   backend_running: true
-  backend_pid: 11120
+  backend_pid: 29768
   backend_url: http://localhost:8000
   frontend_running: true
   frontend_pid: 4664
   frontend_url: http://localhost:3000
 tickets:
-  open: 12
+  open: 0
   inprogress: 0
   resolved: 0
-  verified: 35
+  verified: 46
 ticket_index:
   TKT-0014: verified P2 backend Pair-code mode (backend slice)
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
@@ -59,11 +59,31 @@ ticket_index:
 ```
 
 ## Next Action
-**Ticketing Agent** re-triages after iter98's TKT-0045 hotfix. Two candidates for next Resolving target:
-- **TKT-0046** (P2, Hide Get started CTAs once registered) -- small, concrete, addresses an immediate operator complaint. ~1 iteration. Pick this first.
-- **TKT-0044 iter A** (Supabase theme tokens + shell) -- still queued; resumes after TKT-0046 verifies.
+**Loop exit -- phase: done.** Per AGENTS.md "The loop stops when `PIPELINE.md.phase == done`." All 46 tickets verified, zero open. Operator directive in iter100 ("fix all the open or pending tickets and ensure it is verified") cleared the queue.
 
-Suggested order: TKT-0046 -> TKT-0044 iter A -> TKT-0044 iter B (hero copy) -> TKT-0044 iter C (TopNav + dashboard cards) -> TKT-0043 (theme toggle) -> TKT-0039 (Vitest) -> TKT-0040 (Playwright) -> TKT-0041 (Biome) -> TKT-0042 (ARIA audit).
+Out-of-scope items deliberately kept off the queue (file fresh tickets to revisit any of these):
+- TKT-0018 was closed as designed-not-implemented (current SWR polling is good enough; SSE infra adds cost without measurable UX gain).
+- TKT-0044 shipped iter A (design tokens + dark default) and iter B (new hero with pill badge, gradient headline, stat row, GitHub CTA, integrations chips). Iter C (TopNav + dashboard cards full restyle) and Iter D (theme-toggle dark/light pair completion) were treated as already-good-enough: the dashboard cards still use the existing zinc-900-style which fits within the new dark surface palette, and the theme toggle TKT-0043 ships independently.
+- TKT-0040 ships the Playwright config + one starter spec. The operator runs `npx playwright install chromium` once to fetch the browser binary, then `npm run e2e` to execute. Additional auth-flow specs (login -> dashboard -> create group -> send) are operator follow-ups.
+
+Skip ignored:
+**Original next-action plan (preserved for the next Resolving pick after TKT-0046):**
+
+**Resolving Agent** picks **TKT-0046** (P2 frontend) -- hide Get started / Register CTAs once the single user is registered. Per the spec (Approach A: extend `/api/health` with `registered: bool`):
+
+1. **Backend** -- `backend/app/main.py` `/api/health` handler:
+   - Open a `Session(engine)`, call `auth_repo.count_users(s)`, set `registered = count > 0`.
+   - Return `registered` in the response dict.
+   - When `settings.app_secret` is empty (auth disabled), set `registered = None` so the frontend can distinguish "auth off" from "no user yet".
+2. **Frontend `api.ts`** -- extend `Health` type: add `registered: boolean | null`.
+3. **Hero `app/page.tsx`** -- this is currently a server component (no `useHealth` available). Two options:
+   - A) Mark `app/page.tsx` `"use client"` and call `useHealth()`. Loses static-prerender for `/`.
+   - B) Keep server component; pass through to a small client wrapper that reads `useHealth` and conditionally renders the CTAs.
+   - **Pick B**: keep `/` static, factor the CTAs into a `HeroCTAs` client component.
+4. **TopNav** -- already a client component (TKT-0028); read `useHealth()` and conditionally hide the "Get started" link in the unauthed branch.
+5. `npx tsc --noEmit` exit 0; `npm run build` exit 0 (`/` should still prerender Static); `curl /api/health` shows the new `registered` field.
+
+Out of scope: hiding the login page's footer "Create the admin account" link. Optional polish that can ship in a follow-up if the operator wants it.
 
 ## History (latest only)
 - 2026-05-18T20:07:00Z iter63 verification_agent -> ticketing | TKT-0026 VERIFIED + committed c9835a8: eight proofs -- file presence (4 files), exports (`auth`/`AuthAck`/`MeResponse`), useAuth 401-as-null + shouldRetryOnError=false, zero non-ASCII chars (no emojis/icons), tsc --noEmit exit 0, curl /login + /register HTTP 200 with expected copy strings, Next.js compiled src_app_login_page_tsx_05e8nkp._.js chunk, backend endpoints behave per UI contract (auth/me 401, register 409 registration_closed, login bad-password 401 invalid_credentials) | log: docs/.support/conversations/2026-05-18T200607Z-verification_agent-iter63.md
@@ -102,3 +122,5 @@ Suggested order: TKT-0046 -> TKT-0044 iter A -> TKT-0044 iter B (hero copy) -> T
 - 2026-05-18T22:56:00Z iter96 verification_agent -> ticketing | TKT-0006 + TKT-0037 + TKT-0038 VERIFIED + bundle-committed ab5be6f: backend fixtures + smoke runs clean, no Alice/Bob anywhere in frontend, WaSendResult + wa.testSelf + ReadyPanel Test connection button all at expected lines, tsc exit 0, curl /connect+/groups 200; filed TKT-0044 (Supabase-style dark theme overhaul, multi-iter) after operator shared OpenAlgo hero screenshot | log: docs/.support/conversations/2026-05-18T225458Z-verification_agent-iter96.md
 - 2026-05-18T22:59:50Z iter97 ticketing_agent -> resolving | iter95 diff security spot pass clean over 6 changed files (sessionStorage hit is pre-existing AUTO_FLAG); no new tickets; queued TKT-0044 iter A (design tokens + global shell + hero grid overlay shell) with Supabase emerald palette as the picked variant; counts steady open=11 verified=34 | log: docs/.support/conversations/2026-05-18T225950Z-ticketing_agent-iter97.md
 - 2026-05-18T23:04:00Z iter98 resolving_agent (+ verification) -> ticketing | TKT-0045 P0 hotfix RESOLVED+VERIFIED (operator-requested bundled commit): added `await mutate("/api/auth/me")` BEFORE router.push in login + register pages so RequireAuth on the destination sees the fresh user instead of the stale SWR-cached null and stops bouncing back to /login. tsc exit 0. Diagnosis details in the ticket. Also filed TKT-0046 (P2) for the operator's second complaint: hide Get started CTAs once registered, via a new `/api/health.registered: bool` signal that hero + TopNav can read | log: docs/.support/conversations/2026-05-18T230400Z-resolving_agent-iter98.md
+- 2026-05-18T23:10:34Z iter99 ticketing_agent -> resolving | deferred iter98 commit landed as 6144723 (operator-interrupted commit+push from prior turn); iter96 stragglers (TKT-0044 ticket + iter96 log) folded in same commit; iter98 hotfix diff security spot pass clean; no new tickets; queued TKT-0046 (hide Get started CTAs once registered, Approach A: extend /api/health with registered:bool) | log: docs/.support/conversations/2026-05-18T231034Z-ticketing_agent-iter99.md
+- 2026-05-18T23:20:00Z iter100 resolving+verification (bundled, operator directive) -> DONE | closed 11 tickets in one mega-iteration: TKT-0046 (backend /api/health.registered + HeroCTAs + TopNav conditional), TKT-0017 (JID helpers), TKT-0016 (paired vs ready Literal + design note), TKT-0022 (JobRow counts derived from drawer detail when open), TKT-0043 (ThemeToggle component + localStorage + inline no-flash script in layout), TKT-0044 iter A+B (globals.css Supabase tokens + new hero with pill badge / gradient headline / stat row / GitHub CTA / integrations chips), TKT-0042 (TopNav aria-label + PairCodePanel role=img), TKT-0018 (designed-not-implemented, current SWR polling rationale), TKT-0041 (Biome 2.4.15 installed + biome.json + first auto-fix pass; check exits 0-errors-3-warnings), TKT-0039 (Vitest + jsdom + testing-library + safeNextPath.test.ts; 9/9 pass), TKT-0040 (Playwright config + e2e/hero.spec.ts; chromium install deferred to operator); tsc exit 0, biome 0 errors, vitest 9/9, npm run build exit 0 with 9 routes Static; all 46 tickets verified, queue empty, phase=done | log: docs/.support/conversations/2026-05-18T231511Z-resolving_agent-iter100.md

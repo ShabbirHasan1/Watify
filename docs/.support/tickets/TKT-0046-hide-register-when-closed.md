@@ -1,7 +1,7 @@
 ---
 id: TKT-0046
 title: Hide Get started / Register CTAs once the single user is registered
-status: open
+status: verified
 priority: P2
 area: frontend
 related_tickets: TKT-0026, TKT-0028, TKT-0027

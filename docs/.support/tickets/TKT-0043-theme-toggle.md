@@ -1,7 +1,7 @@
 ---
 id: TKT-0043
 title: Dark/light theme toggle (explicit override of system preference)
-status: open
+status: verified
 priority: P3
 area: frontend
 created: 2026-05-18T22:54:00Z

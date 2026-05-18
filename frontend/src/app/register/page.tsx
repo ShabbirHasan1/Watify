@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { mutate } from "swr";
 import { ApiError, auth } from "@/lib/api";
 
@@ -48,7 +48,11 @@ export default function RegisterPage() {
       if (e instanceof ApiError) {
         if (e.status === 409) setErr({ kind: "closed" });
         else if (e.status === 503) setErr({ kind: "not_configured" });
-        else if (e.status === 422) setErr({ kind: "validation", message: "The backend rejected the form. Check username and password." });
+        else if (e.status === 422)
+          setErr({
+            kind: "validation",
+            message: "The backend rejected the form. Check username and password.",
+          });
         else setErr({ kind: "generic", message: `HTTP ${e.status}` });
       } else {
         setErr({ kind: "generic", message: e instanceof Error ? e.message : "network error" });
@@ -63,7 +67,8 @@ export default function RegisterPage() {
       <div className="mx-auto w-full max-w-sm">
         <h1 className="text-2xl font-semibold mb-1">App already registered</h1>
         <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-          Watify is single-user. The admin account has already been created on this install. Sign in instead.
+          Watify is single-user. The admin account has already been created on this install. Sign in
+          instead.
         </p>
         <Link
           href="/login"
@@ -79,7 +84,8 @@ export default function RegisterPage() {
     <div className="mx-auto w-full max-w-sm">
       <h1 className="text-2xl font-semibold mb-1">Create the admin account</h1>
       <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6">
-        Watify is single-user; only one account can be registered. Pick a strong password -- you will not be able to reset it from this UI.
+        Watify is single-user; only one account can be registered. Pick a strong password -- you
+        will not be able to reset it from this UI.
       </p>
 
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
@@ -157,7 +163,8 @@ function ErrorPanel({ state }: { state: Exclude<NonNullable<ErrorState>, { kind:
   let body: string;
   switch (state.kind) {
     case "not_configured":
-      body = "Auth is not configured on the backend. Set WATIFY_APP_SECRET in backend/.env and restart.";
+      body =
+        "Auth is not configured on the backend. Set WATIFY_APP_SECRET in backend/.env and restart.";
       break;
     case "validation":
     case "generic":

@@ -26,10 +26,7 @@ async function parseBody(res: Response): Promise<unknown> {
   }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  init?: RequestInit
-): Promise<T> {
+export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith("http") ? path : `${API_BASE}${path}`;
   const res = await fetch(url, {
     ...init,
@@ -82,6 +79,9 @@ export type Health = {
   service: string;
   version: string;
   app_fingerprint: string | null;
+  // TKT-0046: true once the single admin is registered, false before,
+  // null when auth is unconfigured (app_secret empty in dev mode).
+  registered: boolean | null;
 };
 
 export type AuthAck = {
@@ -103,7 +103,10 @@ export const auth = {
   me: () => api.get<MeResponse>("/api/auth/me"),
 };
 
-export type WaPhase = "disconnected" | "pairing" | "ready" | "error";
+// TKT-0016: `paired` reserved for post-handshake pre-sync state; the
+// backend currently collapses to `ready` because wars 0.1.3 has no
+// separate sync-complete signal. Frontend treats `paired` like `ready`.
+export type WaPhase = "disconnected" | "pairing" | "paired" | "ready" | "error";
 
 export type WaState = {
   state: WaPhase;
@@ -126,13 +129,11 @@ export const wa = {
   state: () => api.get<WaState>("/api/wa/state"),
   // TKT-0014 / TKT-0035: when `phone` is given, wars uses its pair-code
   // path (operator types an 8-char code on the phone). Empty -> QR flow.
-  connect: (phone?: string) =>
-    api.post<WaState>("/api/wa/connect", phone ? { phone } : {}),
+  connect: (phone?: string) => api.post<WaState>("/api/wa/connect", phone ? { phone } : {}),
   disconnect: () => api.post<WaState>("/api/wa/disconnect"),
   // Send a test message to the linked-device's own number to verify the
   // session can dispatch end-to-end. Rate-limited 15/min on the backend.
-  testSelf: (text: string) =>
-    api.post<WaSendResult>("/api/wa/test/self", { text }),
+  testSelf: (text: string) => api.post<WaSendResult>("/api/wa/test/self", { text }),
 };
 
 export type ContactRead = {
@@ -167,23 +168,15 @@ export type BulkRejectedReason = { index: number; reason: string };
 export const groups = {
   list: () => api.get<FriendGroupRead[]>("/api/groups"),
   get: (id: number) => api.get<FriendGroupDetail>(`/api/groups/${id}`),
-  create: (name: string) =>
-    api.post<FriendGroupRead>("/api/groups", { name }),
-  rename: (id: number, name: string) =>
-    api.patch<FriendGroupRead>(`/api/groups/${id}`, { name }),
+  create: (name: string) => api.post<FriendGroupRead>("/api/groups", { name }),
+  rename: (id: number, name: string) => api.patch<FriendGroupRead>(`/api/groups/${id}`, { name }),
   remove: (id: number) => api.del<void>(`/api/groups/${id}`),
   addContact: (id: number, name: string, phone: string) =>
     api.post<ContactRead>(`/api/groups/${id}/contacts`, { name, phone }),
   removeContact: (id: number, contactId: number) =>
     api.del<void>(`/api/groups/${id}/contacts/${contactId}`),
-  bulkAddContacts: (
-    id: number,
-    contacts: { name: string; phone: string }[]
-  ) =>
-    api.post<BulkContactsResponse>(
-      `/api/groups/${id}/contacts/bulk`,
-      { contacts }
-    ),
+  bulkAddContacts: (id: number, contacts: { name: string; phone: string }[]) =>
+    api.post<BulkContactsResponse>(`/api/groups/${id}/contacts/bulk`, { contacts }),
 };
 
 export const GROUP_MAX = 20;
@@ -191,13 +184,7 @@ export const DEFAULT_MIN_DELAY_S = 3;
 export const DEFAULT_MAX_DELAY_S = 30;
 export const MAX_DELAY_S = 300;
 
-export type JobStatus =
-  | "pending"
-  | "scheduled"
-  | "running"
-  | "completed"
-  | "failed"
-  | "cancelled";
+export type JobStatus = "pending" | "scheduled" | "running" | "completed" | "failed" | "cancelled";
 
 export type AttemptStatus = "pending" | "sent" | "failed";
 
