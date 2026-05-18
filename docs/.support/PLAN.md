@@ -17,7 +17,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - SQLite file `backend/app.db`. Session factory in `app/db.py`.
   - Acceptance: tables created on startup; basic `select` round-trip via a smoke script under `backend/scripts/`.
 
-- **[ ] B-03** — Friend Groups CRUD endpoints.
+- **[x] B-03** — Friend Groups CRUD endpoints. *(done iter6)*
   - `POST /api/groups`, `GET /api/groups`, `GET /api/groups/{id}`, `PATCH /api/groups/{id}`, `DELETE /api/groups/{id}`.
   - Contact endpoints under group: `POST /api/groups/{id}/contacts`, `DELETE /api/groups/{id}/contacts/{cid}`.
   - **Enforce hard cap of 20** at insert; return HTTP 409 with body `{"error": "group_full", "max": 20}`.

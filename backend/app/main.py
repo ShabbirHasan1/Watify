@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.db import init_db
+from app.routers import groups
 
 
 @asynccontextmanager
@@ -22,6 +23,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(groups.router)
 
 
 @app.get("/api/health")
