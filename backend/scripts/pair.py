@@ -17,13 +17,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.settings import settings  # noqa: E402
-from wars import WhatsApp  # noqa: E402
+from app.whatsapp import WarsNotInstalled, _import_wars  # noqa: E402
 
 
 def main() -> int:
+    try:
+        wars = _import_wars()
+    except WarsNotInstalled as e:
+        print(f"ERROR: {e}", file=sys.stderr)
+        return 3
     db_path = settings.whatsapp_db
     print(f"Watify pair: using session db at {db_path}")
-    wa = WhatsApp(db_path)
+    wa = wars.WhatsApp(db_path)
     print("Waiting for QR (up to 5 minutes). Open WhatsApp -> Linked devices.")
     try:
         wa.pair(timeout=300)

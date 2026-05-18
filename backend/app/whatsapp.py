@@ -24,32 +24,79 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, Optional
-
-# TKT-0012: silence three wars / whatsapp-rust protocol log targets that
-# emit WARN/ERROR for routine multi-device protocol events:
-#   - wacore::send                            "Failed to encrypt for device:
-#                                              <stale-LID>: session not found"
-#   - whatsapp_rust::message                  "Decryption still failed after
-#                                              PN->LID migration"
-#   - wacore_libsignal::protocol::session_cipher
-#                                             "Message from <LID> failed to
-#                                              decrypt; No current session"
-# Each fires when wars routes around a stale linked-device or an undecryptable
-# incoming message -- non-actionable noise. The operator can override by
-# setting RUST_LOG in the shell / .env; `setdefault` preserves their value.
-# Must run before the wars import below.
-os.environ.setdefault(
-    "RUST_LOG",
-    "error"
-    ",wacore::send=off"
-    ",whatsapp_rust::message=off"
-    ",wacore_libsignal::protocol::session_cipher=off",
-)
-
-from wars import WhatsApp, qr_to_data_url  # noqa: E402
+from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from app.settings import settings
+
+if TYPE_CHECKING:
+    from wars import WhatsApp  # type-only; runtime import goes through _import_wars
+
+# TKT-0012 + TKT-0013: lazy wars import. The wars wheel is large
+# (~30 MB native code with bundled Rust). If it is missing or fails
+# to build, the rest of the FastAPI app still has to boot so the
+# operator can hit /api/health, /api/groups, /api/jobs and read the
+# /connect page's error state. The two pieces stay paired here:
+#   - RUST_LOG defaults via setdefault BEFORE the actual import.
+#   - WarsNotInstalled sentinel raised on ImportError / build error.
+#     Worker thread catches it and sets state="error" + last_error so
+#     the frontend ErrorPanel surfaces the install hint.
+
+_WARS_INSTALL_HINT = (
+    "wars package is not installed or failed to build. Run "
+    "`uv sync` (or `uv pip install wars`) inside the backend/ "
+    "directory to enable the WhatsApp integration."
+)
+
+
+class WarsNotInstalled(RuntimeError):
+    """Sentinel raised when `import wars` fails. Carries the friendly
+    install hint as its message and preserves the original cause for
+    debugging."""
+
+    def __init__(self, cause: BaseException | None = None) -> None:
+        super().__init__(_WARS_INSTALL_HINT)
+        if cause is not None:
+            self.__cause__ = cause
+
+
+# Module-level cache. Two-level: once we've tried and failed we don't
+# retry on every connect call -- the operator needs to fix their env
+# and restart.
+_wars_module: Any | None = None
+_wars_attempt_failed: bool = False
+_wars_import_error: BaseException | None = None
+_wars_import_lock = threading.Lock()
+
+
+def _import_wars() -> Any:
+    """Lazily import wars. Caches the module on success and the error
+    on failure. Sets `RUST_LOG` defaults exactly once, immediately
+    before the first import attempt (TKT-0012).
+    """
+    global _wars_module, _wars_attempt_failed, _wars_import_error
+    with _wars_import_lock:
+        if _wars_module is not None:
+            return _wars_module
+        if _wars_attempt_failed:
+            raise WarsNotInstalled(_wars_import_error)
+
+        os.environ.setdefault(
+            "RUST_LOG",
+            "error"
+            ",wacore::send=off"
+            ",whatsapp_rust::message=off"
+            ",wacore_libsignal::protocol::session_cipher=off",
+        )
+        try:
+            import wars as _mod
+        except Exception as e:  # noqa: BLE001 -- catch ImportError + Rust build errors
+            _wars_attempt_failed = True
+            _wars_import_error = e
+            log.exception("wars import failed; backend will report wars_not_installed state")
+            raise WarsNotInstalled(e) from e
+        _wars_module = _mod
+        log.info("wars module loaded lazily (version=%s)", getattr(_mod, "__version__", "?"))
+        return _wars_module
 
 log = logging.getLogger(__name__)
 
@@ -206,7 +253,7 @@ class WaSingleton:
         return n
 
     @classmethod
-    def _build_wa(cls) -> tuple[WhatsApp, bool]:
+    def _build_wa(cls) -> tuple["WhatsApp", bool]:
         """Pick a wars constructor based on session-encryption settings.
 
         Returns (wa_instance, migrated_from_file). The bool is True when
@@ -219,10 +266,11 @@ class WaSingleton:
         - key set + no row but legacy file exists: bridge -> WhatsApp(DB_PATH), True (migrate after first ready).
         - key set + neither: fresh -> WhatsApp() (in-memory). Bool False.
         """
+        wars = _import_wars()
         key = settings.session_encryption_key
         if not key:
             log.info("wars: legacy file-backed mode (whatsapp.db at %s)", DB_PATH)
-            return WhatsApp(str(DB_PATH)), False
+            return wars.WhatsApp(str(DB_PATH)), False
 
         # Encrypted mode.
         from sqlmodel import Session
@@ -247,7 +295,7 @@ class WaSingleton:
                             "wars: removed %d stale legacy whatsapp.db file(s) at boot",
                             removed,
                         )
-                    return WhatsApp.from_bytes(blob), False
+                    return wars.WhatsApp.from_bytes(blob), False
         except Exception as e:  # noqa: BLE001
             log.exception(
                 "wars: encrypted mode -- could not load WaSession (%s); falling back to fresh start",
@@ -258,10 +306,10 @@ class WaSingleton:
             log.info(
                 "wars: encrypted mode -- WaSession empty, whatsapp.db exists; will migrate on first ready",
             )
-            return WhatsApp(str(DB_PATH)), True
+            return wars.WhatsApp(str(DB_PATH)), True
 
         log.info("wars: encrypted mode -- fresh start (in-memory, awaits pair)")
-        return WhatsApp(), False
+        return wars.WhatsApp(), False
 
     @classmethod
     def _worker_loop(cls) -> None:
@@ -323,10 +371,12 @@ class WaSingleton:
                         )
 
 
+            wars_mod = _import_wars()  # cached; already loaded by _build_wa above
+
             @wa.on_qr
             def _on_qr(code: str) -> None:
                 try:
-                    durl = qr_to_data_url(code)
+                    durl = wars_mod.qr_to_data_url(code)
                 except Exception as e:  # noqa: BLE001
                     log.warning("qr_to_data_url failed: %s", e)
                     durl = None
@@ -358,6 +408,13 @@ class WaSingleton:
                     return
                 cls._set(state="disconnected", clear_qr=True)
                 log.info("wars on_disconnect: state=disconnected")
+        except WarsNotInstalled as e:
+            # TKT-0013: wars wheel missing or failed to build. Surface
+            # the friendly install hint via state.last_error; rest of
+            # the FastAPI app (groups, jobs, health) keeps working.
+            log.error("wars build skipped: %s", e)
+            cls._set(state="error", last_error=f"wars_not_installed: {e}")
+            return
         except Exception as e:  # noqa: BLE001
             log.exception("wars build failed")
             cls._set(state="error", last_error=f"build_failed: {e}")
