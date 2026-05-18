@@ -86,7 +86,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - Submit → POST `/api/send`; show resulting job id.
   - Acceptance: schedule and immediate sends both create jobs visible on /history.
 
-- **[ ] F-06** — `/history` page (and `/`).
+- **[x] F-06** — `/history` page (and `/`). *(done iter14)*
   - Table of recent jobs (status, group, message preview, scheduled_at, progress X/Y, cancel button if pending/scheduled).
   - Per-job detail drawer with attempt-level status (sent/failed/error).
   - Dashboard at `/` shows: WA state badge, total contacts, jobs today, last 24h sent count, link to history.

@@ -1,12 +1,41 @@
+"use client";
+
+import { useMemo } from "react";
 import BackendStatus from "@/components/BackendStatus";
 import WhatsAppTile from "@/components/WhatsAppTile";
+import { useGroups } from "@/hooks/useGroups";
+import { useJobs } from "@/hooks/useJobs";
 
 export default function DashboardPage() {
-  const stats = [
-    { label: "Friend groups", value: "0" },
-    { label: "Contacts", value: "0" },
-    { label: "Jobs today", value: "0" },
-  ];
+  const { list: groups } = useGroups();
+  const { list: jobs } = useJobs();
+
+  const stats = useMemo(() => {
+    const totalContacts = groups.reduce(
+      (s, g) => s + (g.contact_count ?? 0),
+      0
+    );
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
+
+    let jobsToday = 0;
+    let sent24h = 0;
+    for (const j of jobs) {
+      const created = new Date(j.created_at).getTime();
+      if (created >= startOfDay.getTime()) jobsToday++;
+      if (created >= cutoff24h) sent24h += j.counts?.sent ?? 0;
+    }
+    return [
+      {
+        label: "Friend groups",
+        value: String(groups.length),
+      },
+      { label: "Contacts", value: String(totalContacts) },
+      { label: "Jobs today", value: String(jobsToday) },
+      { label: "Sent (24h)", value: String(sent24h) },
+    ];
+  }, [groups, jobs]);
 
   return (
     <div className="space-y-6">
@@ -20,7 +49,7 @@ export default function DashboardPage() {
         <BackendStatus />
       </header>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <WhatsAppTile />
         {stats.map((s) => (
           <div
