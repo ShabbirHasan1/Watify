@@ -73,7 +73,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - When `ready`, shows owner number + Disconnect button.
   - Acceptance: full pair-flow works end-to-end with a real phone.
 
-- **[ ] F-04** — `/groups` page.
+- **[x] F-04** — `/groups` page. *(done iter11)*
   - List groups; create new group form; click a group to drill into its contacts.
   - Contact list shows count `X / 20`; Add Contact disabled at 20.
   - Bulk upload modal: paste CSV (`name,phone`), preview, submit; surfaces row-level errors.

@@ -85,3 +85,56 @@ export const wa = {
   connect: () => api.post<WaState>("/api/wa/connect"),
   disconnect: () => api.post<WaState>("/api/wa/disconnect"),
 };
+
+export type ContactRead = {
+  id: number;
+  group_id: number;
+  name: string;
+  phone_e164: string;
+  created_at: string;
+};
+
+export type FriendGroupRead = {
+  id: number;
+  name: string;
+  created_at: string;
+  contact_count: number;
+};
+
+export type FriendGroupDetail = {
+  id: number;
+  name: string;
+  created_at: string;
+  contacts: ContactRead[];
+};
+
+export type BulkContactsResponse = {
+  inserted: ContactRead[];
+  skipped: ContactRead[];
+};
+
+export type BulkRejectedReason = { index: number; reason: string };
+
+export const groups = {
+  list: () => api.get<FriendGroupRead[]>("/api/groups"),
+  get: (id: number) => api.get<FriendGroupDetail>(`/api/groups/${id}`),
+  create: (name: string) =>
+    api.post<FriendGroupRead>("/api/groups", { name }),
+  rename: (id: number, name: string) =>
+    api.patch<FriendGroupRead>(`/api/groups/${id}`, { name }),
+  remove: (id: number) => api.del<void>(`/api/groups/${id}`),
+  addContact: (id: number, name: string, phone: string) =>
+    api.post<ContactRead>(`/api/groups/${id}/contacts`, { name, phone }),
+  removeContact: (id: number, contactId: number) =>
+    api.del<void>(`/api/groups/${id}/contacts/${contactId}`),
+  bulkAddContacts: (
+    id: number,
+    contacts: { name: string; phone: string }[]
+  ) =>
+    api.post<BulkContactsResponse>(
+      `/api/groups/${id}/contacts/bulk`,
+      { contacts }
+    ),
+};
+
+export const GROUP_MAX = 20;

@@ -4,10 +4,10 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 
 ```yaml
 phase: scaffold           # planning | scaffold | backend | frontend | ticketing | resolving | verification | done
-agent: frontend_agent     # which AGENTS.md role runs next
-iteration: 10
-last_updated: 2026-05-18T15:46:09Z
-last_conversation: docs/.support/conversations/2026-05-18T154609Z-backend_agent-iter10.md
+agent: backend_agent      # which AGENTS.md role runs next
+iteration: 11
+last_updated: 2026-05-18T15:51:01Z
+last_conversation: docs/.support/conversations/2026-05-18T155101Z-frontend_agent-iter11.md
 servers:
   backend_running: true
   backend_pid: 43712
@@ -23,17 +23,23 @@ tickets:
 ```
 
 ## Next Action
-Run the **Frontend Agent** on PLAN item **F-04** — Groups page (CRUD + bulk):
-- `src/hooks/useGroups.ts` — SWR list + `createGroup`, `renameGroup`, `deleteGroup`, `addContact`, `deleteContact`, `bulkAddContacts` mutators using the api wrapper.
-- `src/app/groups/page.tsx`:
-  - Left column: list of groups with `name (X/20)` counter; "New group" form below.
-  - Click a group -> right column shows contact table.
-  - Add Contact form (disabled at 20). Each row has a Delete (trash) action — text button labeled "remove", no icons.
-  - Bulk modal: textarea pasting `name,phone` lines, preview, submit -> shows `inserted`/`skipped` counts. Surfaces row-level errors from 422 `bulk_rejected`.
-- Disable bulk submit when paste would exceed 20.
-- Acceptance: visual creation of a group; 21st contact gets disabled UI + surfaces server 409 on a forced attempt; bulk with one bad row leaves the group untouched.
-- Mark F-04 `[x]`. Set `agent: backend_agent` next (B-07 — send-to-group + APScheduler).
-- Commit: `feat(F-04): groups + contacts UI with bulk-add modal`.
+Run the **Backend Agent** on PLAN item **B-07** — send-to-group orchestrator + APScheduler:
+- `uv add apscheduler` (3.x) and `tzlocal`.
+- `app/scheduler.py` — `BackgroundScheduler` with `SQLAlchemyJobStore(url="sqlite:///app.db", tablename="apscheduler_jobs")`. Started on FastAPI lifespan startup; shutdown on lifespan exit.
+- `app/sender.py` — pure function `run_send_job(job_id: int)` that:
+  1. Loads `SendJob` + its group's contacts.
+  2. Sets status running, started_at=now.
+  3. For each contact sequentially: pick `random.uniform(min_delay_s, max_delay_s)`, `time.sleep`, then queue `WaSingleton.send_to(contact.phone, message)` and record a SendAttempt. One at a time.
+  4. On completion set status completed/failed and finished_at.
+- `app/routers/jobs.py`:
+  - `POST /api/send` body `{group_id, message, schedule: "now"|ISO8601, min_delay_s, max_delay_s}` -> creates SendJob and schedules `run_send_job` via APScheduler. Returns job id.
+  - `GET /api/jobs` -> list jobs with progress (count of attempts by status).
+  - `GET /api/jobs/{id}` -> job + attempts.
+  - `DELETE /api/jobs/{id}` -> cancel if scheduled or pending.
+- Validation: 1 <= min_delay_s <= max_delay_s <= 300; group must exist + have >=1 contact; require wa state "ready".
+- Acceptance: schedule a 2-contact job for `now`, observe `apscheduler_jobs` table populated and attempts roll through with measurable delay (we can mock the actual wars.send for this test by checking attempts move pending -> sent over time when wars is paired; otherwise the attempts will record `failed: not_ready` and that's also a valid trace).
+- Mark B-07 `[x]`. Set `agent: frontend_agent` next (F-05 — compose + schedule UI).
+- Commit: `feat(B-07): send-to-group orchestrator + APScheduler`.
 
 ## History
 - 2026-05-18T00:00:00Z iter0 bootstrap -> planning | initial scaffold created by user | log: (none)
@@ -47,3 +53,4 @@ Run the **Frontend Agent** on PLAN item **F-04** — Groups page (CRUD + bulk):
 - 2026-05-18T15:35:47Z iter8 backend_agent -> scaffold | B-05 done: wars singleton on dedicated worker thread (PyO3 !Send), /api/wa/state|connect|disconnect, QR data-url surfaced within ~4s; backend pid 48980 | log: docs/.support/conversations/2026-05-18T153547Z-backend_agent-iter8.md
 - 2026-05-18T15:41:22Z iter9 frontend_agent -> scaffold | F-03 done: useWaState SWR hook, Connect page with auto-pair on mount, QR display, Disconnect button, error/retry path; Dashboard WhatsApp tile uses live state | log: docs/.support/conversations/2026-05-18T154122Z-frontend_agent-iter9.md
 - 2026-05-18T15:46:09Z iter10 backend_agent -> scaffold | B-06 done: /api/wa/test/self|to endpoints; 409 not_ready when state!=ready; phone redaction in response; backend pid 43712 | log: docs/.support/conversations/2026-05-18T154609Z-backend_agent-iter10.md
+- 2026-05-18T15:51:01Z iter11 frontend_agent -> scaffold | F-04 done: Groups page with two-column layout, create/select/rename/delete, contact CRUD with 20-cap disabled UI, BulkAddModal with paste-and-preview + per-row error surfacing | log: docs/.support/conversations/2026-05-18T155101Z-frontend_agent-iter11.md
