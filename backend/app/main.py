@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.db import init_db
@@ -38,6 +39,36 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(
+    request: Request, exc: StarletteHTTPException
+) -> JSONResponse:
+    """Flatten HTTPException.detail into a top-level body.
+
+    FastAPI's default wraps everything under `{"detail": ...}`. The
+    frontend wants flat error envelopes per REQUIREMENTS S2; this
+    handler maps:
+      detail=dict        -> dict body, inject `error` if missing
+      detail=str         -> {"error": detail, "detail": detail}
+      detail=anything    -> {"error": "http_error", "detail": detail}
+    RequestValidationError (Pydantic 422) is left to FastAPI's default
+    so the per-field error list keeps its standard shape.
+    """
+    detail = exc.detail
+    if isinstance(detail, dict):
+        body: dict = dict(detail)
+        body.setdefault("error", "http_error")
+    elif isinstance(detail, str):
+        body = {"error": detail, "detail": detail}
+    else:
+        body = {"error": "http_error", "detail": detail}
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=body,
+        headers=getattr(exc, "headers", None),
+    )
 
 
 @app.exception_handler(Exception)

@@ -1,11 +1,11 @@
 ---
 id: TKT-0001
 title: Standardize API error response shape
-status: open
+status: verified
 priority: P2
 area: backend
 created: 2026-05-18T16:14:48Z
-updated: 2026-05-18T16:14:48Z
+updated: 2026-05-18T17:12:13Z
 created_by: ticketing_agent
 related_plan_item: B-03, B-04, B-06, B-07
 ---
@@ -42,3 +42,33 @@ FastAPI's `HTTPException.detail` is rendered under a `detail` key. Frontend has 
 
 ## Resolution history
 - 2026-05-18T16:14:48Z — filed by Ticketing Agent (iter16).
+- 2026-05-18T17:07:49Z — Resolving Agent (iter27) set status to inprogress.
+- 2026-05-18T17:09:30Z — Resolving Agent (iter27) shipped:
+  - `backend/app/main.py` — new `@app.exception_handler(StarletteHTTPException)` flattens:
+    - dict detail -> dict body with `error` defaulted to `"http_error"`.
+    - string detail -> `{"error": detail, "detail": detail}` (keeps back-compat).
+    - other -> `{"error": "http_error", "detail": detail}`.
+    RequestValidationError (Pydantic 422) is left to FastAPI's default per design.
+  - `frontend/src/components/groups/BulkAddModal.tsx` — reads `body.reasons` directly instead of `body.detail.reasons`.
+  - `frontend/src/app/send/page.tsx` — 422 branch simplified to use `e.message` (api.ts already extracts the flat `error` key into the message).
+
+  Smoke (5 paths, backend pid 43260):
+  | Case | Body |
+  |---|---|
+  | 404 group_not_found | `{"error":"group_not_found","detail":"group_not_found"}` |
+  | 409 group_full | `{"error":"group_full","max":20}` |
+  | 422 bulk_rejected | `{"error":"bulk_rejected","reasons":[{"index":1,"reason":"..."}]}` |
+  | 409 not_ready | `{"error":"not_ready","state":"disconnected"}` |
+  | 422 Pydantic validation | `{"detail":[{"type":"string_too_short",...}]}` (unchanged) |
+
+  All 5 frontend routes recompiled clean and serve HTTP 200.
+
+  Status set to `resolved`; awaiting Verification Agent.
+- 2026-05-18T17:12:13Z — Verification Agent (iter28) PASSED with independent assert-based reproduction:
+  - GET `/api/groups/99999` -> 404 `{"error":"group_not_found","detail":"group_not_found"}`.
+  - 21st contact POST -> 409 `{"error":"group_full","max":20}`.
+  - bulk with bad row -> 422 `{"error":"bulk_rejected","reasons":[{"index":1,"reason":"phone must be 6-15 digits..."}]}`.
+  - `/api/wa/test/self` while not-ready -> 409 `{"error":"not_ready","state":"pairing"}` (state value is dynamic, envelope is exact).
+  - Pydantic `text=""` -> 422 `{"detail":[{"type":"string_too_short",...}]}` (unchanged by design).
+  - All 5 frontend routes still HTTP 200.
+  Status set to `verified`. Committed `fix(TKT-0001): flat error envelope on HTTPException` and pushed.

@@ -66,19 +66,10 @@ export default function BulkAddModal({
         e instanceof ApiError &&
         typeof e.body === "object" &&
         e.body &&
-        "detail" in e.body
+        "reasons" in e.body &&
+        Array.isArray((e.body as { reasons: unknown[] }).reasons)
       ) {
-        const det = (e.body as { detail: unknown }).detail;
-        if (
-          det &&
-          typeof det === "object" &&
-          "reasons" in det &&
-          Array.isArray((det as { reasons: unknown[] }).reasons)
-        ) {
-          setReasons(
-            (det as { reasons: BulkRejectedReason[] }).reasons
-          );
-        }
+        setReasons((e.body as { reasons: BulkRejectedReason[] }).reasons);
       }
     } finally {
       setBusy(false);

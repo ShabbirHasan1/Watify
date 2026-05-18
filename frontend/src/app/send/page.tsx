@@ -86,11 +86,9 @@ export default function SendPage() {
       if (e instanceof ApiError) {
         if (e.status === 409) setError("Backend not ready or job already terminal.");
         else if (e.status === 422)
-          setError(
-            typeof e.body === "object" && e.body && "detail" in e.body
-              ? String((e.body as { detail: unknown }).detail)
-              : "Invalid input. Check delay range and schedule."
-          );
+          // ApiError.message already pulls body.error (flat envelope from
+          // backend HTTPException handler) or falls back to "HTTP 422".
+          setError(e.message || "Invalid input. Check delay range and schedule.");
         else setError(e.message);
       } else {
         setError("Could not create the send job.");
