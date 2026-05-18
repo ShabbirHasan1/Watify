@@ -12,7 +12,10 @@ export function useWaState() {
     {
       refreshInterval: (latest) => {
         const phase = (latest as WaState | undefined)?.state;
-        if (phase === "disconnected" || phase === "pairing") return 2000;
+        // 1s while pairing so the QR-age countdown stays smooth;
+        // 2s while disconnected to detect background state changes; off otherwise.
+        if (phase === "pairing") return 1000;
+        if (phase === "disconnected") return 2000;
         return 0;
       },
       revalidateOnFocus: false,

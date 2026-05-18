@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useWaState } from "@/hooks/useWaState";
 
 const AUTO_FLAG = "watify.autopair.started";
@@ -89,7 +89,10 @@ export default function ConnectPage() {
       ) : null}
 
       {waState?.state === "pairing" ? (
-        <PairingPanel qrDataUrl={waState.qr_data_url} />
+        <PairingPanel
+          qrDataUrl={waState.qr_data_url}
+          lastEventAt={waState.last_event_at}
+        />
       ) : null}
 
       {waState?.state === "ready" ? (
@@ -117,7 +120,51 @@ function PanelMuted({ children }: { children: React.ReactNode }) {
   );
 }
 
-function PairingPanel({ qrDataUrl }: { qrDataUrl: string | null }) {
+const QR_LIFETIME_S = 30;
+const QR_STALE_AT_S = 20;
+
+function PairingPanel({
+  qrDataUrl,
+  lastEventAt,
+}: {
+  qrDataUrl: string | null;
+  lastEventAt: string | null;
+}) {
+  // Tick every 500ms so the countdown reads smoothly. SWR's 1s poll
+  // bumps lastEventAt on each on_qr fire, which resets the timer.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(id);
+  }, []);
+
+  const ageMs = useMemo(() => {
+    if (!lastEventAt) return null;
+    const t = Date.parse(lastEventAt);
+    if (Number.isNaN(t)) return null;
+    return Math.max(0, now - t);
+  }, [lastEventAt, now]);
+  const ageS = ageMs == null ? null : Math.floor(ageMs / 1000);
+  const remainingS = ageS == null ? null : Math.max(0, QR_LIFETIME_S - ageS);
+
+  let tone: string;
+  let label: string;
+  let dim = false;
+  if (ageS == null || !qrDataUrl) {
+    tone = "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300";
+    label = "Waiting for QR...";
+  } else if (ageS < QR_STALE_AT_S) {
+    tone = "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300";
+    label = `Fresh QR. Scan within ~${remainingS}s.`;
+  } else if (ageS < QR_LIFETIME_S) {
+    tone = "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300";
+    label = `Refreshing soon (${remainingS}s left). Wait for the next QR if your scan fails.`;
+  } else {
+    tone = "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300";
+    label = "QR expired. Waiting for a fresh one to load...";
+    dim = true;
+  }
+
   return (
     <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
       <h2 className="text-base font-semibold">Scan the QR with WhatsApp</h2>
@@ -131,7 +178,7 @@ function PairingPanel({ qrDataUrl }: { qrDataUrl: string | null }) {
           <img
             src={qrDataUrl}
             alt="WhatsApp pairing QR"
-            className="h-72 w-72 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white p-2"
+            className={`h-72 w-72 rounded-md border border-zinc-200 dark:border-zinc-800 bg-white p-2 transition-opacity ${dim ? "opacity-30" : "opacity-100"}`}
           />
         ) : (
           <div className="h-72 w-72 rounded-md border border-dashed border-zinc-300 dark:border-zinc-700 flex items-center justify-center text-sm text-zinc-500">
@@ -139,8 +186,14 @@ function PairingPanel({ qrDataUrl }: { qrDataUrl: string | null }) {
           </div>
         )}
       </div>
-      <p className="mt-3 text-xs text-zinc-500 text-center">
-        WhatsApp rotates this code every 30 seconds. The page updates automatically.
+      <div
+        className={`mt-3 inline-flex w-full justify-center rounded-md px-3 py-1.5 text-xs font-medium ${tone}`}
+      >
+        {label}
+      </div>
+      <p className="mt-2 text-xs text-zinc-500 text-center">
+        WhatsApp rotates this code every {QR_LIFETIME_S} seconds. The page updates automatically.
+        If your phone says &quot;can&apos;t connect&quot;, the QR likely expired -- wait for the next one.
       </p>
     </div>
   );
