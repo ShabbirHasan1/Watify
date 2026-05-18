@@ -35,7 +35,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - Cache QR data URL via `@wa.on_qr` callback; clear when ready.
   - Acceptance: state machine moves disconnected → pairing → ready after QR scan; `wa.send("ping")` (test-to-self) succeeds.
 
-- **[ ] B-06** — Test message endpoints.
+- **[x] B-06** — Test message endpoints. *(done iter10)*
   - `POST /api/wa/test/self` — `wa.send(text)`; routes to owner.
   - `POST /api/wa/test/to` — `{"phone": "...", "text": "..."}` → `wa.send(phone, text)`.
   - Validation: backend rejects sends when state != ready (HTTP 409).

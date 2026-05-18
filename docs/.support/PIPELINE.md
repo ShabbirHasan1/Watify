@@ -4,13 +4,13 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 
 ```yaml
 phase: scaffold           # planning | scaffold | backend | frontend | ticketing | resolving | verification | done
-agent: backend_agent      # which AGENTS.md role runs next
-iteration: 9
-last_updated: 2026-05-18T15:41:22Z
-last_conversation: docs/.support/conversations/2026-05-18T154122Z-frontend_agent-iter9.md
+agent: frontend_agent     # which AGENTS.md role runs next
+iteration: 10
+last_updated: 2026-05-18T15:46:09Z
+last_conversation: docs/.support/conversations/2026-05-18T154609Z-backend_agent-iter10.md
 servers:
   backend_running: true
-  backend_pid: 48980
+  backend_pid: 43712
   backend_url: http://localhost:8000
   frontend_running: true
   frontend_pid: 42204
@@ -23,13 +23,17 @@ tickets:
 ```
 
 ## Next Action
-Run the **Backend Agent** on PLAN item **B-06** — test message endpoints:
-- `POST /api/wa/test/self` body `{"text": "..."}` -> `wa.send(text)` via the singleton. 409 if state != "ready".
-- `POST /api/wa/test/to` body `{"phone": "...", "text": "..."}` -> `wa.send(phone, text)`. 409 if state != "ready". Phone normalized via `app.jid.normalize_phone`.
-- Both endpoints return `{"queued": true, "phone_redacted": "..."}` (using `redact_phone`). The actual send is queued into the wars worker.
-- Acceptance: when state != "ready", both endpoints return 409 `{"error":"not_ready","state":"..."}`. When state == "ready", payload is enqueued (no real WhatsApp send needed for this iteration; can't test without scanning the QR).
-- Mark B-06 `[x]`. Set `agent: frontend_agent` next (F-04 — Groups UI + bulk upload using B-03/B-04).
-- Commit: `feat(B-06): test message endpoints (send-to-self, send-to-number)`.
+Run the **Frontend Agent** on PLAN item **F-04** — Groups page (CRUD + bulk):
+- `src/hooks/useGroups.ts` — SWR list + `createGroup`, `renameGroup`, `deleteGroup`, `addContact`, `deleteContact`, `bulkAddContacts` mutators using the api wrapper.
+- `src/app/groups/page.tsx`:
+  - Left column: list of groups with `name (X/20)` counter; "New group" form below.
+  - Click a group -> right column shows contact table.
+  - Add Contact form (disabled at 20). Each row has a Delete (trash) action — text button labeled "remove", no icons.
+  - Bulk modal: textarea pasting `name,phone` lines, preview, submit -> shows `inserted`/`skipped` counts. Surfaces row-level errors from 422 `bulk_rejected`.
+- Disable bulk submit when paste would exceed 20.
+- Acceptance: visual creation of a group; 21st contact gets disabled UI + surfaces server 409 on a forced attempt; bulk with one bad row leaves the group untouched.
+- Mark F-04 `[x]`. Set `agent: backend_agent` next (B-07 — send-to-group + APScheduler).
+- Commit: `feat(F-04): groups + contacts UI with bulk-add modal`.
 
 ## History
 - 2026-05-18T00:00:00Z iter0 bootstrap -> planning | initial scaffold created by user | log: (none)
@@ -42,3 +46,4 @@ Run the **Backend Agent** on PLAN item **B-06** — test message endpoints:
 - 2026-05-18T15:29:16Z iter7 backend_agent -> scaffold | B-04 done: bulk-add contacts endpoint with all-or-nothing validation, dedupe, overflow guard; 5 curl cases verified; backend pid 39988 | log: docs/.support/conversations/2026-05-18T152916Z-backend_agent-iter7.md
 - 2026-05-18T15:35:47Z iter8 backend_agent -> scaffold | B-05 done: wars singleton on dedicated worker thread (PyO3 !Send), /api/wa/state|connect|disconnect, QR data-url surfaced within ~4s; backend pid 48980 | log: docs/.support/conversations/2026-05-18T153547Z-backend_agent-iter8.md
 - 2026-05-18T15:41:22Z iter9 frontend_agent -> scaffold | F-03 done: useWaState SWR hook, Connect page with auto-pair on mount, QR display, Disconnect button, error/retry path; Dashboard WhatsApp tile uses live state | log: docs/.support/conversations/2026-05-18T154122Z-frontend_agent-iter9.md
+- 2026-05-18T15:46:09Z iter10 backend_agent -> scaffold | B-06 done: /api/wa/test/self|to endpoints; 409 not_ready when state!=ready; phone redaction in response; backend pid 43712 | log: docs/.support/conversations/2026-05-18T154609Z-backend_agent-iter10.md
