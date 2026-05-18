@@ -102,3 +102,26 @@ class WaSession(SQLModel, table=True):
     ciphertext: bytes = Field(sa_column_kwargs={"nullable": False})
     created_at: datetime = Field(default_factory=_now)
     updated_at: datetime = Field(default_factory=_now)
+
+
+class User(SQLModel, table=True):
+    """Singleton admin user (TKT-0023).
+
+    Watify is single-user; this table holds at most one row with
+    `id = 1`. The application-level `register-once` lock in
+    `app.auth_repo.create_admin` rejects every subsequent attempt.
+    `username` is also UNIQUE so an accidental SQL-layer insert
+    fails loudly with an IntegrityError instead of silently winning.
+    """
+
+    __tablename__ = "user"
+
+    id: int | None = Field(default=1, primary_key=True)
+    username: str = Field(unique=True, index=True, min_length=1, max_length=80)
+    # argon2id hash: $argon2id$v=19$m=...,t=...,p=...$<salt>$<digest>
+    password_hash: str = Field(min_length=1)
+    # url-safe base64 of 32 random bytes; rotated on logout so a stolen
+    # refresh token is invalidated. NEVER returned in API responses.
+    refresh_secret: str = Field(min_length=1)
+    created_at: datetime = Field(default_factory=_now)
+    last_login_at: datetime | None = None
