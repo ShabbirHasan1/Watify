@@ -5,9 +5,9 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 ```yaml
 phase: ticketing
 agent: ticketing_agent
-iteration: 84
-last_updated: 2026-05-18T21:50:00Z
-last_conversation: docs/.support/conversations/2026-05-18T214956Z-verification_agent-iter84.md
+iteration: 87
+last_updated: 2026-05-18T22:08:00Z
+last_conversation: docs/.support/conversations/2026-05-18T220705Z-verification_agent-iter87.md
 servers:
   backend_running: true
   backend_pid: 16032
@@ -16,10 +16,10 @@ servers:
   frontend_pid: 42204
   frontend_url: http://localhost:3000
 tickets:
-  open: 7
+  open: 6
   inprogress: 0
   resolved: 0
-  verified: 28
+  verified: 29
 ticket_index:
   TKT-0014: verified P2 backend Pair-code mode (backend slice)
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
@@ -31,7 +31,7 @@ ticket_index:
   TKT-0030: verified P1 infra install/install.sh + update.sh
   TKT-0032: verified P2 backend CSRF defense (X-Requested-With + Origin check)
   TKT-0034: verified P1 frontend apiFetch credentials include
-  TKT-0035: open P3 frontend Pair-code frontend toggle + panel
+  TKT-0035: verified P3 frontend Pair-code frontend toggle + panel
   TKT-0027: open P2 frontend Public hero page; move dashboard to /dashboard
   TKT-0028: open P2 frontend Auth-aware TopNav
   TKT-0029: open P2 frontend Route guards
@@ -48,11 +48,11 @@ ticket_index:
 ```
 
 ## Next Action
-**Ticketing Agent** re-triages. Open queue is now 7 P3 (six original P3 + TKT-0035 P3 pair-code frontend):
-- P3 backend: TKT-0006 (test phone constant), TKT-0016 (paired vs ready state machine), TKT-0017 (JID helpers)
-- P3 frontend: TKT-0018 (SSE push of QR), TKT-0022 (job drawer cache drift), TKT-0033 (Next.js postcss XSS advisory), TKT-0035 (pair-code mode-switch + PairCodePanel)
+**Ticketing Agent** re-triages. Pair-code feature is now end-to-end (TKT-0014 backend + TKT-0035 frontend, both verified). Remaining open queue is six P3 polish:
+- P3 backend: TKT-0006 (move test phone constant out of smoke_db.py), TKT-0016 (distinguish `paired` vs `ready` in wa state machine), TKT-0017 (JID helpers)
+- P3 frontend: TKT-0018 (SSE push of QR instead of polling), TKT-0022 (job drawer cache drift), TKT-0033 (Next.js postcss XSS advisory tracking)
 
-All P1+P2 work is now verified. Suggested next Resolving target by user-facing impact: **TKT-0035** (the user-visible half of pair-code mode just shipped on the backend). Alternative: TKT-0033 (security advisory tracking, requires only a `package.json` audit + README note). Both are small enough for a single iteration. Ticketing should also run a brief security spot pass over the iter83 diff (whatsapp.py + routers/whatsapp.py).
+Suggested next Resolving target: **TKT-0033** -- smallest scope (a `package.json` audit + a tracking note in REQUIREMENTS or a README), and is the only remaining "security-adjacent" item even though it's filed as P3. Alternative: TKT-0006 (test phone constant) is also a 1-file cleanup. Ticketing should also run a brief security spot pass over the iter86 diff (api.ts + useWaState + PairCodePanel + connect/page).
 
 ## History (latest only)
 - 2026-05-18T20:07:00Z iter63 verification_agent -> ticketing | TKT-0026 VERIFIED + committed c9835a8: eight proofs -- file presence (4 files), exports (`auth`/`AuthAck`/`MeResponse`), useAuth 401-as-null + shouldRetryOnError=false, zero non-ASCII chars (no emojis/icons), tsc --noEmit exit 0, curl /login + /register HTTP 200 with expected copy strings, Next.js compiled src_app_login_page_tsx_05e8nkp._.js chunk, backend endpoints behave per UI contract (auth/me 401, register 409 registration_closed, login bad-password 401 invalid_credentials) | log: docs/.support/conversations/2026-05-18T200607Z-verification_agent-iter63.md
@@ -76,4 +76,7 @@ All P1+P2 work is now verified. Suggested next Resolving target by user-facing i
 - 2026-05-18T21:34:00Z iter81 verification_agent -> ticketing | TKT-0008 VERIFIED + committed 9605962: seven proofs -- Toaster.tsx 2814b with useSyncExternalStore+toast.{success,error,dismiss}+Toaster default, layout.tsx mounts after children, all 4 hooks import+fire toast at correct lines, tsc exit 0, zero non-ASCII across all 5 edited files, curl / + /dashboard + /groups all 200, SSR-safe typeof window guard at line 38 + getServerSnapshot returns [] at line 61 | log: docs/.support/conversations/2026-05-18T213351Z-verification_agent-iter81.md
 - 2026-05-18T21:38:39Z iter82 ticketing_agent -> resolving | iter80 diff security spot pass clean (no dangerouslySetInnerHTML/eval/storage/cookie/hex/console.log across the 6 changed files); no new tickets; queued TKT-0014 (pair-code mode) as the last P2 with a recommended backend-first split (worker connect(phone) + on_pair_code callback + WaState pair_code field + /api/wa/connect body extension); counts unchanged open=7 verified=27 | log: docs/.support/conversations/2026-05-18T213839Z-ticketing_agent-iter82.md
 - 2026-05-18T21:48:00Z iter83 resolving_agent -> verification | TKT-0014 RESOLVED (backend slice): ClientState.pair_code + _set kwargs + snapshot mirroring; @wa.on_pair_code callback (hasattr gated) sets pair_code state from wars Tokio thread (state-lock only); worker connect branch dispatches wa.connect(phone) when arg is a non-empty string; on_connected/disconnect/cycle/stop all clear_pair_code; public WaSingleton.connect(phone=None); router WaConnectRequest body + WaState.pair_code field + normalize_phone-validated 422 invalid_phone; py_compile clean; backend pid 16032; 4 smokes pass (no-body 200 QR, state has pair_code field, phone-body 200 pair-code path, garbage phone 422); filed TKT-0035 (P3 frontend) for the /connect mode-switch + PairCodePanel follow-on | log: docs/.support/conversations/2026-05-18T214324Z-resolving_agent-iter83.md
-- 2026-05-18T21:50:00Z iter84 verification_agent -> ticketing | TKT-0014 VERIFIED + committed: eight checks -- py_compile clean, pair_code in ClientState/_set/WaState DTO, @wa.on_pair_code hasattr-gated at whatsapp.py:421-423, WaSingleton.connect(phone) at :567, worker dispatch at :526-532 with isinstance(arg,str) and arg, router WaConnectRequest at :25 + handler at :73, _snapshot_to_dto carries pair_code at :60, 4 smokes pass (A 200 QR, B state keys include pair_code, C 200 phone-body, D 422 invalid_phone); all P1+P2 now verified | log: docs/.support/conversations/2026-05-18T214956Z-verification_agent-iter84.md
+- 2026-05-18T21:50:00Z iter84 verification_agent -> ticketing | TKT-0014 VERIFIED + committed c5b3827: eight checks -- py_compile clean, pair_code in ClientState/_set/WaState DTO, @wa.on_pair_code hasattr-gated at whatsapp.py:421-423, WaSingleton.connect(phone) at :567, worker dispatch at :526-532 with isinstance(arg,str) and arg, router WaConnectRequest at :25 + handler at :73, _snapshot_to_dto carries pair_code at :60, 4 smokes pass (A 200 QR, B state keys include pair_code, C 200 phone-body, D 422 invalid_phone); all P1+P2 now verified | log: docs/.support/conversations/2026-05-18T214956Z-verification_agent-iter84.md
+- 2026-05-18T21:54:43Z iter85 ticketing_agent -> resolving | iter83 diff security pass clean (no dangerouslySetInnerHTML/eval/storage/cookie/hex/console.log); pair_code logging discipline verified at whatsapp.py:425 -- logs only length not value (avoids leak via screen-share of server logs); no new tickets; queued TKT-0035 (P3 frontend pair-code UI) as next Resolving target | log: docs/.support/conversations/2026-05-18T215443Z-ticketing_agent-iter85.md
+- 2026-05-18T22:01:00Z iter86 resolving_agent -> verification | TKT-0035 RESOLVED: four-file change set -- api.ts WaState.pair_code field + wa.connect(phone?) signature, useWaState.connect(phone?) thread-through, new components/connect/PairCodePanel.tsx (centered monospaced 4-3 chunked code + linked-devices instructions + Waiting fallback), app/connect/page.tsx adds Mode/phoneDraft/codeErr state + ModeSwitch tab-group + PairCodeStarter form (E.164 client validation, 422 toast.error + inline) + render branch QR-PairingPanel vs PairCodePanel; npx tsc --noEmit exit 0; curl /connect 200 with Loading skeleton (RequireAuth fires; full UI loads after login) | log: docs/.support/conversations/2026-05-18T215931Z-resolving_agent-iter86.md
+- 2026-05-18T22:08:00Z iter87 verification_agent -> ticketing | TKT-0035 VERIFIED + committed: eight proofs -- WaState.pair_code at api.ts:113, wa.connect(phone?) at :123, useWaState.connect(phone?) at :28, PairCodePanel.tsx 1970b with aria-label+formatChunks+Waiting fallback, connect/page.tsx imports PairCodePanel and uses ModeSwitch+PairCodeStarter+PairCodePanel + Mode type + handlers, tsc exit 0, zero non-ASCII across 4 files, curl /connect 200 + all 4 expected copy strings found in merged chunk _049tu0h._.js (59308 bytes); pair-code feature now end-to-end | log: docs/.support/conversations/2026-05-18T220705Z-verification_agent-iter87.md

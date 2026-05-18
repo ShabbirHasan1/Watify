@@ -25,8 +25,8 @@ export function useWaState() {
     }
   );
 
-  async function connect() {
-    const next = await wa.connect();
+  async function connect(phone?: string) {
+    const next = await wa.connect(phone);
     await mutate(KEY, next, { revalidate: false });
   }
 

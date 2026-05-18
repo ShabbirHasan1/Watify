@@ -108,6 +108,9 @@ export type WaPhase = "disconnected" | "pairing" | "ready" | "error";
 export type WaState = {
   state: WaPhase;
   qr_data_url: string | null;
+  // TKT-0014: 8-char pair-code populated when the operator opted into
+  // pair-code mode by passing a phone to /api/wa/connect.
+  pair_code: string | null;
   owner_phone: string | null;
   last_error: string | null;
   last_event_at: string | null;
@@ -115,7 +118,10 @@ export type WaState = {
 
 export const wa = {
   state: () => api.get<WaState>("/api/wa/state"),
-  connect: () => api.post<WaState>("/api/wa/connect"),
+  // TKT-0014 / TKT-0035: when `phone` is given, wars uses its pair-code
+  // path (operator types an 8-char code on the phone). Empty -> QR flow.
+  connect: (phone?: string) =>
+    api.post<WaState>("/api/wa/connect", phone ? { phone } : {}),
   disconnect: () => api.post<WaState>("/api/wa/disconnect"),
 };
 

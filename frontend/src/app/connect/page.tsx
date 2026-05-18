@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import PairCodePanel from "@/components/connect/PairCodePanel";
 import RequireAuth from "@/components/RequireAuth";
+import { toast } from "@/components/Toaster";
+import { ApiError } from "@/lib/api";
 import { useWaState } from "@/hooks/useWaState";
 
 const AUTO_FLAG = "watify.autopair.started";
@@ -14,10 +17,17 @@ export default function ConnectPage() {
   );
 }
 
+type Mode = "qr" | "code";
+
 function ConnectInner() {
   const { waState, isLoading, connect, disconnect } = useWaState();
   const [busy, setBusy] = useState(false);
   const autoStarted = useRef(false);
+  // TKT-0035: pair-code mode. Local-only state; refreshing the page
+  // resets back to QR mode, which mirrors the legacy behavior.
+  const [mode, setMode] = useState<Mode>("qr");
+  const [phoneDraft, setPhoneDraft] = useState("");
+  const [codeErr, setCodeErr] = useState<string | null>(null);
 
   // Auto-pair once per mount / per session. Three layers of guard so dev
   // hot-reloads do not stampede /api/wa/connect:
@@ -69,6 +79,56 @@ function ConnectInner() {
     await connect();
   }
 
+  async function handlePairCodeConnect() {
+    setCodeErr(null);
+    const phone = phoneDraft.trim();
+    if (!phone.startsWith("+") || phone.length < 8 || phone.length > 16) {
+      setCodeErr("Phone must start with + and be 8-16 characters (E.164).");
+      return;
+    }
+    autoStarted.current = true;
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(AUTO_FLAG, "1");
+    }
+    setBusy(true);
+    try {
+      await connect(phone);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) {
+        const detail =
+          e.body && typeof e.body === "object" && "detail" in e.body
+            ? String((e.body as { detail?: unknown }).detail ?? "invalid phone")
+            : "invalid phone";
+        setCodeErr(detail);
+        toast.error(detail);
+      } else {
+        const msg = e instanceof Error ? e.message : "network error";
+        setCodeErr(msg);
+        toast.error(msg);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleModeChange(next: Mode) {
+    if (next === mode) return;
+    setMode(next);
+    setCodeErr(null);
+    // If currently pairing, flipping modes means we need to reset the
+    // wars worker so it asks for the right callback again. The /connect
+    // POST without a body resumes the QR path; the user explicitly
+    // clicks "Get pair code" for the code path.
+    if (next === "qr" && waState?.state === "pairing") {
+      setBusy(true);
+      try {
+        await connect();
+      } finally {
+        setBusy(false);
+      }
+    }
+  }
+
   return (
     <div className="space-y-6">
       <header>
@@ -82,7 +142,11 @@ function ConnectInner() {
         <PanelMuted>Checking backend...</PanelMuted>
       ) : null}
 
-      {waState?.state === "disconnected" && !busy ? (
+      {waState?.state !== "ready" && waState?.state !== "error" ? (
+        <ModeSwitch mode={mode} onChange={(m) => handleModeChange(m)} />
+      ) : null}
+
+      {waState?.state === "disconnected" && !busy && mode === "qr" ? (
         <PanelMuted>
           <div className="flex items-center justify-between gap-3">
             <span>Not connected yet.</span>
@@ -97,11 +161,25 @@ function ConnectInner() {
         </PanelMuted>
       ) : null}
 
-      {waState?.state === "pairing" ? (
+      {mode === "code" && waState?.state !== "ready" && waState?.state !== "error" ? (
+        <PairCodeStarter
+          phoneDraft={phoneDraft}
+          setPhoneDraft={setPhoneDraft}
+          err={codeErr}
+          busy={busy}
+          onSubmit={() => handlePairCodeConnect()}
+        />
+      ) : null}
+
+      {waState?.state === "pairing" && mode === "qr" ? (
         <PairingPanel
           qrDataUrl={waState.qr_data_url}
           lastEventAt={waState.last_event_at}
         />
+      ) : null}
+
+      {waState?.state === "pairing" && mode === "code" ? (
+        <PairCodePanel code={waState.pair_code} />
       ) : null}
 
       {waState?.state === "ready" ? (
@@ -125,6 +203,109 @@ function PanelMuted({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 text-sm text-zinc-700 dark:text-zinc-300">
       {children}
+    </div>
+  );
+}
+
+function ModeSwitch({
+  mode,
+  onChange,
+}: {
+  mode: Mode;
+  onChange: (m: Mode) => void;
+}) {
+  const base =
+    "px-3 py-1.5 text-sm font-medium transition border";
+  const active =
+    "bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 border-zinc-900 dark:border-zinc-100";
+  const idle =
+    "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800";
+  return (
+    <div className="inline-flex rounded-md overflow-hidden" role="tablist" aria-label="Pairing mode">
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "qr"}
+        onClick={() => onChange("qr")}
+        className={`${base} rounded-l-md ${mode === "qr" ? active : idle}`}
+      >
+        Scan QR
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={mode === "code"}
+        onClick={() => onChange("code")}
+        className={`${base} rounded-r-md -ml-px ${mode === "code" ? active : idle}`}
+      >
+        Use pair code instead
+      </button>
+    </div>
+  );
+}
+
+function PairCodeStarter({
+  phoneDraft,
+  setPhoneDraft,
+  err,
+  busy,
+  onSubmit,
+}: {
+  phoneDraft: string;
+  setPhoneDraft: (v: string) => void;
+  err: string | null;
+  busy: boolean;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6">
+      <h2 className="text-base font-semibold">Pair with a code</h2>
+      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        Enter the phone number you will type the code on. WhatsApp will display "Link with phone number" on Linked devices.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit();
+        }}
+        className="mt-4 flex flex-wrap items-end gap-2"
+      >
+        <div className="flex-1 min-w-[14rem]">
+          <label
+            htmlFor="pair-phone"
+            className="block text-xs font-medium text-zinc-700 dark:text-zinc-300"
+          >
+            Phone (E.164)
+          </label>
+          <input
+            id="pair-phone"
+            name="pair-phone"
+            type="tel"
+            inputMode="tel"
+            autoComplete="tel"
+            placeholder="+919876543210"
+            required
+            value={phoneDraft}
+            onChange={(e) => setPhoneDraft(e.target.value)}
+            className="mt-1 w-full rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-mono"
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={busy || phoneDraft.trim().length === 0}
+          className="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+        >
+          {busy ? "Requesting..." : "Get pair code"}
+        </button>
+      </form>
+      {err ? (
+        <div
+          role="alert"
+          className="mt-3 rounded border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200 px-3 py-2 text-sm"
+        >
+          {err}
+        </div>
+      ) : null}
     </div>
   );
 }
