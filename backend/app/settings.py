@@ -61,6 +61,17 @@ class Settings(BaseSettings):
     # before any echo arrives.
     owner_phone: str | None = None
 
+    # TKT-0031: per-install identity. install/install.sh generates both
+    # values via `openssl rand -hex 32` on fresh setup and preserves
+    # them across re-installs. Auth endpoints (TKT-0024) require
+    # `app_secret` to operate; the boot guard logs a WARN when empty.
+    #   - app_secret: signing key for JWT / cookie HMAC / CSRF tokens.
+    #   - api_key:    bearer token for future programmatic clients
+    #                 (the openalgo-style "X-API-KEY" pattern).
+    # Separate keys so rotating one doesn't invalidate the other.
+    app_secret: str = ""
+    api_key: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

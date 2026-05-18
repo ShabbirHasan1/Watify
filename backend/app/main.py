@@ -9,6 +9,8 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.db import init_db
+from app.identity import fingerprint as app_fingerprint
+from app.identity import is_configured as identity_configured
 from app.limiter import limiter, rate_limit_handler
 from app.logging_setup import configure as configure_logging
 from app.routers import groups, jobs, whatsapp
@@ -23,6 +25,16 @@ log = logging.getLogger("app.main")
 async def lifespan(app: FastAPI):
     configure_logging()
     log.info("watify starting version=%s", __version__)
+    # TKT-0031: surface identity status at boot so the operator
+    # immediately sees whether auth endpoints will refuse to operate.
+    if identity_configured():
+        log.info("watify identity: app_secret configured (fingerprint=%s)", app_fingerprint())
+    else:
+        log.warning(
+            "watify identity: WATIFY_APP_SECRET is empty -- auth endpoints will "
+            "return 503 auth_not_configured. Run install/install.sh or generate "
+            "manually: `openssl rand -hex 32`."
+        )
     init_db()
     scheduler_start()
     try:
@@ -95,4 +107,12 @@ app.include_router(jobs.router)
 
 @app.get("/api/health")
 def health() -> dict[str, object]:
-    return {"ok": True, "service": "watify", "version": __version__}
+    return {
+        "ok": True,
+        "service": "watify",
+        "version": __version__,
+        # TKT-0031: stable 8-char identifier for the installed app_secret.
+        # Null when unconfigured so the operator can spot the missing
+        # secret with one curl. The full secret never leaves the box.
+        "app_fingerprint": app_fingerprint(),
+    }
