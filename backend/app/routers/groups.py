@@ -12,7 +12,8 @@ from sqlmodel import Session, func, select
 from app.constants import MAX_CONTACTS_PER_GROUP
 from app.db import get_session
 from app.jid import InvalidPhoneError, normalize_phone
-from app.models import Contact, FriendGroup
+from app.models import Contact, FriendGroup, JobStatus, SendJob
+from app.scheduler import aps_job_id, get_scheduler
 from app.schemas import (
     BulkContactsRequest,
     BulkContactsResponse,
@@ -138,6 +139,23 @@ def delete_group(
     session: Session = Depends(get_session),
 ) -> Response:
     grp = _get_group_or_404(session, group_id)
+
+    # Cancel any APScheduler entries before the cascade wipes the SendJob rows.
+    # APScheduler has its own table with no FK to send_job, so it would not be
+    # cleaned up by SQLAlchemy's cascade.
+    pending_jobs = session.exec(
+        select(SendJob.id).where(
+            SendJob.group_id == group_id,
+            SendJob.status.in_([JobStatus.pending, JobStatus.scheduled]),
+        )
+    ).all()
+    scheduler = get_scheduler()
+    for job_id in pending_jobs:
+        try:
+            scheduler.remove_job(aps_job_id(job_id))
+        except Exception:  # noqa: BLE001 — job may have already fired
+            pass
+
     session.delete(grp)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

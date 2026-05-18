@@ -34,7 +34,10 @@ class FriendGroup(SQLModel, table=True):
         back_populates="group",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
     )
-    jobs: list["SendJob"] = Relationship(back_populates="group")
+    jobs: list["SendJob"] = Relationship(
+        back_populates="group",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"},
+    )
 
 
 class Contact(SQLModel, table=True):
