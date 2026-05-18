@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import EmptyState from "@/components/EmptyState";
 import {
   ApiError,
   DEFAULT_MAX_DELAY_S,
@@ -119,13 +120,18 @@ export default function SendPage() {
           {groupsLoading && groups.length === 0 ? (
             <p className="text-sm text-zinc-500">Loading groups...</p>
           ) : groups.length === 0 ? (
-            <p className="text-sm text-zinc-500">
-              No groups yet.{" "}
-              <Link href="/groups" className="text-emerald-700 hover:underline">
-                Create one first
-              </Link>
-              .
-            </p>
+            <EmptyState
+              title="No groups yet"
+              body="Create a friend group before composing a message."
+              cta={
+                <Link
+                  href="/groups"
+                  className="inline-flex rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700"
+                >
+                  Go to Groups
+                </Link>
+              }
+            />
           ) : (
             <select
               value={groupId === "" ? "" : String(groupId)}

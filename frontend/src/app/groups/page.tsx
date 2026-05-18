@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import BulkAddModal from "@/components/groups/BulkAddModal";
+import EmptyState from "@/components/EmptyState";
 import { ApiError, GROUP_MAX } from "@/lib/api";
 import { useGroupDetail } from "@/hooks/useGroupDetail";
 import { useGroups } from "@/hooks/useGroups";
@@ -114,7 +115,10 @@ export default function GroupsPage() {
 
         <section className="rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5">
           {selectedId == null ? (
-            <p className="text-sm text-zinc-500">Pick a group on the left, or create one.</p>
+            <EmptyState
+              title="No group selected"
+              body="Pick a group on the left, or create one to start adding contacts."
+            />
           ) : (
             <GroupDetailPanel
               groupId={selectedId}
@@ -252,8 +256,11 @@ function GroupDetailPanel({
           <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
             {detail.contacts.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-3 py-6 text-center text-zinc-500">
-                  No contacts yet. Add one above or paste a bulk list.
+                <td colSpan={3} className="px-3 py-4">
+                  <EmptyState
+                    title="No contacts yet"
+                    body={`Add one above or paste up to ${GROUP_MAX} rows with the Bulk add button.`}
+                  />
                 </td>
               </tr>
             ) : (

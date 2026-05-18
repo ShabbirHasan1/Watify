@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import BackendStatus from "@/components/BackendStatus";
+import SoftCapBanner from "@/components/SoftCapBanner";
 import WhatsAppTile from "@/components/WhatsAppTile";
 import { useGroups } from "@/hooks/useGroups";
 import { useJobs } from "@/hooks/useJobs";
@@ -10,7 +11,7 @@ export default function DashboardPage() {
   const { list: groups } = useGroups();
   const { list: jobs } = useJobs();
 
-  const stats = useMemo(() => {
+  const { stats, sent24h } = useMemo(() => {
     const totalContacts = groups.reduce(
       (s, g) => s + (g.contact_count ?? 0),
       0
@@ -20,21 +21,21 @@ export default function DashboardPage() {
     const cutoff24h = Date.now() - 24 * 60 * 60 * 1000;
 
     let jobsToday = 0;
-    let sent24h = 0;
+    let sent24hCount = 0;
     for (const j of jobs) {
       const created = new Date(j.created_at).getTime();
       if (created >= startOfDay.getTime()) jobsToday++;
-      if (created >= cutoff24h) sent24h += j.counts?.sent ?? 0;
+      if (created >= cutoff24h) sent24hCount += j.counts?.sent ?? 0;
     }
-    return [
-      {
-        label: "Friend groups",
-        value: String(groups.length),
-      },
-      { label: "Contacts", value: String(totalContacts) },
-      { label: "Jobs today", value: String(jobsToday) },
-      { label: "Sent (24h)", value: String(sent24h) },
-    ];
+    return {
+      sent24h: sent24hCount,
+      stats: [
+        { label: "Friend groups", value: String(groups.length) },
+        { label: "Contacts", value: String(totalContacts) },
+        { label: "Jobs today", value: String(jobsToday) },
+        { label: "Sent (24h)", value: String(sent24hCount) },
+      ],
+    };
   }, [groups, jobs]);
 
   return (
@@ -48,6 +49,8 @@ export default function DashboardPage() {
         </div>
         <BackendStatus />
       </header>
+
+      <SoftCapBanner sent24h={sent24h} />
 
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <WhatsAppTile />

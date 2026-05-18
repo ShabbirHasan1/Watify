@@ -96,10 +96,10 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
 
 ## Infra / Cross-cutting (I-NN)
 
-- **[ ] I-01** — `backend/.env.example` and `frontend/.env.local.example` checked in.
+- **[x] I-01** — `backend/.env.example` and `frontend/.env.local.example` checked in. *(verified iter16)*
 - **[ ] I-02** — Top-level `Makefile` or PowerShell scripts: `dev-backend`, `dev-frontend`, `pair` (one-shot wars pair CLI).
 - **[ ] I-03** — README updated with full local-run instructions once F-07 lands.
-- **[ ] I-04** — `wars` install: verify `pip install wars` works in the uv env. If not, document fallback (build from source via maturin per wars.md §"Building from source").
+- **[x] I-04** — `wars` install verified iter8: `uv add wars` pulled wars 0.1.3 + pillow + qrcode from PyPI; no maturin fallback needed.
 
 ## Done definition
 PLAN is done when every `B-NN` and `F-NN` is `[x]`, all open tickets are `verified`, and the dashboard at `/` answers correctly with the backend reachable.
