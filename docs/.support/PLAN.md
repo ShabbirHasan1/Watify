@@ -29,7 +29,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - All-or-nothing: if any row is invalid OR if adding the batch would push the group over 20, reject the whole batch with the offending indices listed.
   - Acceptance: valid batch inserts atomically; one bad row rejects the whole batch.
 
-- **[ ] B-05** — `wars` integration singleton + connection endpoints.
+- **[x] B-05** — `wars` integration singleton + connection endpoints. *(done iter8)*
   - `app/whatsapp.py` lazy singleton per wars.md §7 with `Lock()`, `db_path="whatsapp.db"`, `OWNER` resolved post-pair.
   - Endpoints: `POST /api/wa/connect` (start), `POST /api/wa/disconnect`, `GET /api/wa/state` → `{state: disconnected|pairing|ready|error, qr_data_url: str|null}`.
   - Cache QR data URL via `@wa.on_qr` callback; clear when ready.

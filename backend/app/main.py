@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.db import init_db
-from app.routers import groups
+from app.routers import groups, whatsapp
 
 
 @asynccontextmanager
@@ -25,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(groups.router)
+app.include_router(whatsapp.router)
 
 
 @app.get("/api/health")
