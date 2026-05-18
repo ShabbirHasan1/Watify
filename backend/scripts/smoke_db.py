@@ -12,6 +12,7 @@ from sqlmodel import Session, select  # noqa: E402
 
 from app.db import engine, init_db  # noqa: E402
 from app.models import Contact, FriendGroup  # noqa: E402
+from scripts._fixtures import TEST_PHONE_E164_DIGITS  # noqa: E402
 
 
 def main() -> int:
@@ -27,7 +28,7 @@ def main() -> int:
             grp = existing
 
         if not s.exec(select(Contact).where(Contact.group_id == grp.id)).first():
-            c = Contact(group_id=grp.id, name="self", phone_e164="911234567890")
+            c = Contact(group_id=grp.id, name="self", phone_e164=TEST_PHONE_E164_DIGITS)
             s.add(c)
             s.commit()
 

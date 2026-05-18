@@ -103,7 +103,7 @@ export default function BulkAddModal({
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={8}
-            placeholder={"Alice, +91 9876543210\nBob, +91 9876543211"}
+            placeholder={"Priya, +91 9876543210\nArjun, +91 9876543211"}
             className="w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-3 py-2 text-sm font-mono"
           />
 

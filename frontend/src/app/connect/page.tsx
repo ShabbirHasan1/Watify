@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import PairCodePanel from "@/components/connect/PairCodePanel";
 import RequireAuth from "@/components/RequireAuth";
 import { toast } from "@/components/Toaster";
-import { ApiError } from "@/lib/api";
+import { ApiError, wa } from "@/lib/api";
 import { useWaState } from "@/hooks/useWaState";
 
 const AUTO_FLAG = "watify.autopair.started";
@@ -396,9 +396,42 @@ function ReadyPanel({
   ownerPhone: string | null;
   onDisconnect: () => void;
 }) {
+  // Test-message state. The button sends a small canary to self via
+  // /api/wa/test/self (backend rate-limited 15/min). Result surfaces
+  // both inline and via the global toaster so the user gets feedback
+  // either at the panel or wherever they're looking.
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function handleTestSelf() {
+    setTesting(true);
+    setTestResult(null);
+    const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
+    try {
+      await wa.testSelf(`Watify test message at ${ts} UTC`);
+      const msg = "Test message queued. Check WhatsApp on your phone within a few seconds.";
+      setTestResult({ ok: true, text: msg });
+      toast.success("Test message sent to your own number");
+    } catch (e) {
+      let msg = "Send failed.";
+      if (e instanceof ApiError) {
+        if (e.status === 409) msg = "WhatsApp is not Ready yet. Pair first.";
+        else if (e.status === 429) msg = "Too many test sends. Try again in a minute.";
+        else if (e.status === 403) msg = "CSRF check rejected the request.";
+        else msg = `Send failed (HTTP ${e.status}).`;
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
+      setTestResult({ ok: false, text: msg });
+      toast.error(msg);
+    } finally {
+      setTesting(false);
+    }
+  }
+
   return (
     <div className="rounded-lg border border-emerald-200 dark:border-emerald-900 bg-emerald-50 dark:bg-emerald-950 p-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold text-emerald-900 dark:text-emerald-200">
             WhatsApp connected
@@ -407,14 +440,37 @@ function ReadyPanel({
             Linked as {ownerPhone ?? "this device"}.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onDisconnect}
-          className="rounded-md border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-800"
-        >
-          Disconnect
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleTestSelf}
+            disabled={testing}
+            className="rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {testing ? "Sending..." : "Test connection"}
+          </button>
+          <button
+            type="button"
+            onClick={onDisconnect}
+            className="rounded-md border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-800"
+          >
+            Disconnect
+          </button>
+        </div>
       </div>
+      {testResult ? (
+        <div
+          role={testResult.ok ? "status" : "alert"}
+          className={
+            "mt-3 rounded border px-3 py-2 text-sm " +
+            (testResult.ok
+              ? "border-emerald-300 dark:border-emerald-800 bg-white dark:bg-emerald-900 text-emerald-900 dark:text-emerald-100"
+              : "border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200")
+          }
+        >
+          {testResult.text}
+        </div>
+      ) : null}
     </div>
   );
 }

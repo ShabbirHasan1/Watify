@@ -226,7 +226,7 @@ function GroupDetailPanel({
             disabled={full}
             maxLength={80}
             className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-2 py-1.5 text-sm disabled:opacity-50"
-            placeholder="Alice"
+            placeholder="Priya"
           />
         </div>
         <div className="flex-1 min-w-[180px]">

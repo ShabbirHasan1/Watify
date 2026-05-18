@@ -116,6 +116,12 @@ export type WaState = {
   last_event_at: string | null;
 };
 
+export type WaSendResult = {
+  queued: boolean;
+  target: "self" | "number";
+  phone_redacted: string | null;
+};
+
 export const wa = {
   state: () => api.get<WaState>("/api/wa/state"),
   // TKT-0014 / TKT-0035: when `phone` is given, wars uses its pair-code
@@ -123,6 +129,10 @@ export const wa = {
   connect: (phone?: string) =>
     api.post<WaState>("/api/wa/connect", phone ? { phone } : {}),
   disconnect: () => api.post<WaState>("/api/wa/disconnect"),
+  // Send a test message to the linked-device's own number to verify the
+  // session can dispatch end-to-end. Rate-limited 15/min on the backend.
+  testSelf: (text: string) =>
+    api.post<WaSendResult>("/api/wa/test/self", { text }),
 };
 
 export type ContactRead = {
