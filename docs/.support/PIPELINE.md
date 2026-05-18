@@ -5,9 +5,9 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 ```yaml
 phase: ticketing
 agent: ticketing_agent
-iteration: 78
-last_updated: 2026-05-18T21:20:00Z
-last_conversation: docs/.support/conversations/2026-05-18T211927Z-verification_agent-iter78.md
+iteration: 81
+last_updated: 2026-05-18T21:34:00Z
+last_conversation: docs/.support/conversations/2026-05-18T213351Z-verification_agent-iter81.md
 servers:
   backend_running: true
   backend_pid: 37636
@@ -16,10 +16,10 @@ servers:
   frontend_pid: 42204
   frontend_url: http://localhost:3000
 tickets:
-  open: 8
+  open: 7
   inprogress: 0
   resolved: 0
-  verified: 26
+  verified: 27
 ticket_index:
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
   TKT-0025: verified P1 backend Auth middleware
@@ -46,13 +46,12 @@ ticket_index:
 ```
 
 ## Next Action
-**Ticketing Agent** re-triages. All v1.1 P1+P2 security/UX tickets are now verified (TKT-0024/0025/0026/0027/0028/0029/0030/0031/0032/0034). Remaining open queue is entirely P2/P3 polish:
+**Ticketing Agent** re-triages. Remaining open queue is one P2 + six P3:
 - P2 backend: TKT-0014 (pair-code mode alongside QR)
-- P2 frontend: TKT-0008 (global toaster)
 - P3 backend: TKT-0006 (test phone constant), TKT-0016 (paired vs ready state machine), TKT-0017 (JID helpers)
 - P3 frontend: TKT-0018 (SSE push of QR), TKT-0022 (job drawer cache drift), TKT-0033 (Next.js postcss XSS advisory)
 
-Suggested next Resolving target: **TKT-0014** (P2 backend pair-code mode) -- meaningful user-facing feature (operator types a code instead of scanning QR; useful when desktop camera unavailable). After that: TKT-0008 (toaster) for nicer error surfacing. Ticketing should also run a brief security spot pass over the iter77 diff (csrf_middleware.py + main.py + api.ts) -- expectation: clean since the change set is small and follows the same pattern as auth_middleware.
+Suggested next Resolving target: **TKT-0014** -- the last P2 ticket and a meaningful user-facing feature. Per AGENTS.md the Resolving Agent picks highest-priority open ticket so this is the strict pick. The Ticketing Agent should also run a brief security spot pass over the iter80 diff (Toaster + layout + 4 hooks).
 
 ## History (latest only)
 - 2026-05-18T20:07:00Z iter63 verification_agent -> ticketing | TKT-0026 VERIFIED + committed c9835a8: eight proofs -- file presence (4 files), exports (`auth`/`AuthAck`/`MeResponse`), useAuth 401-as-null + shouldRetryOnError=false, zero non-ASCII chars (no emojis/icons), tsc --noEmit exit 0, curl /login + /register HTTP 200 with expected copy strings, Next.js compiled src_app_login_page_tsx_05e8nkp._.js chunk, backend endpoints behave per UI contract (auth/me 401, register 409 registration_closed, login bad-password 401 invalid_credentials) | log: docs/.support/conversations/2026-05-18T200607Z-verification_agent-iter63.md
@@ -70,4 +69,7 @@ Suggested next Resolving target: **TKT-0014** (P2 backend pair-code mode) -- mea
 - 2026-05-18T21:05:00Z iter75 verification_agent -> ticketing | TKT-0029 VERIFIED + committed fcb3841: seven proofs -- RequireAuth uses useAuth+usePathname+useRouter (router.replace /login?next=), 5 authed pages wrapped (grep -l returns 5), login imports useSearchParams + has safeNextPath validator, 9-case node unit test of safeNextPath passes (null/empty/valid -> echo or fallback; //evil.com / javascript: / http:// / /a:b all -> /dashboard), tsc --noEmit exit 0, non-ASCII char 0, curl 5 authed routes all 200 with Loading skeleton; v1.1 milestone fully shipped | log: docs/.support/conversations/2026-05-18T210401Z-verification_agent-iter75.md
 - 2026-05-18T21:08:47Z iter76 ticketing_agent -> resolving | iter74 diff security spot pass clean (sessionStorage hits in connect/page.tsx are pre-existing autopair-flag tracking from TKT-0010, not iter74; no dangerouslySetInnerHTML/eval/document.cookie/console.log/hex secrets in any of the 7 changed files); no new tickets; queued TKT-0032 (CSRF defense) -- the only remaining P2 backend security item; counts unchanged open=9 verified=25 | log: docs/.support/conversations/2026-05-18T210847Z-ticketing_agent-iter76.md
 - 2026-05-18T21:15:00Z iter77 resolving_agent -> verification | TKT-0032 RESOLVED: three-file change set -- new backend/app/csrf_middleware.py (Starlette BaseHTTPMiddleware; bypass non-/api/* + GET/HEAD/OPTIONS + /api/auth/{login,register}; otherwise require X-Requested-With:XMLHttpRequest OR matching Origin or 403 csrf_required), main.py adds CSRFMiddleware AFTER AuthMiddleware so it sits outermost (CSRF -> Auth -> CORS -> handler), api.ts injects X-Requested-With into apiFetch default headers; py_compile + tsc both clean; backend restarted pid 37636; 8-smoke pass (GET 401, POST no-hdr 403, POST+X-Requested-With 401, POST+Origin=cors 401, POST+Origin=evil 403, login no-hdr 401invalid, login+X-Requested-With 401invalid, OPTIONS 200) | log: docs/.support/conversations/2026-05-18T211414Z-resolving_agent-iter77.md
-- 2026-05-18T21:20:00Z iter78 verification_agent -> ticketing | TKT-0032 VERIFIED + committed: four structural checks (py_compile clean, tsc exit 0, X-Requested-With at api.ts:50, middleware order CORS@57/Auth@70/CSRF@78 with CSRF outermost) + 8 smokes independently reproduced (GET 401, POST no-hdr 403, POST+X-Requested-With 401, POST+Origin=cors 401, POST+Origin=evil 403, login no-hdr 401invalid, login+X-Requested-With 401invalid, OPTIONS 200) | log: docs/.support/conversations/2026-05-18T211927Z-verification_agent-iter78.md
+- 2026-05-18T21:20:00Z iter78 verification_agent -> ticketing | TKT-0032 VERIFIED + committed 13fc7db: four structural checks (py_compile clean, tsc exit 0, X-Requested-With at api.ts:50, middleware order CORS@57/Auth@70/CSRF@78 with CSRF outermost) + 8 smokes independently reproduced (GET 401, POST no-hdr 403, POST+X-Requested-With 401, POST+Origin=cors 401, POST+Origin=evil 403, login no-hdr 401invalid, login+X-Requested-With 401invalid, OPTIONS 200) | log: docs/.support/conversations/2026-05-18T211927Z-verification_agent-iter78.md
+- 2026-05-18T21:24:24Z iter79 ticketing_agent -> resolving | iter77 csrf diff security spot pass clean (no dangerouslySetInnerHTML/eval/storage/cookie/hex/console.log across csrf_middleware.py + main.py + api.ts); chose TKT-0008 (frontend toaster, smaller self-contained scope) over TKT-0014 (pair-code mode, multi-iter PyO3 worker refactor) for next Resolving; no new tickets; counts steady open=8 verified=26 | log: docs/.support/conversations/2026-05-18T212424Z-ticketing_agent-iter79.md
+- 2026-05-18T21:32:00Z iter80 resolving_agent -> verification | TKT-0008 RESOLVED: six-file change set -- new components/Toaster.tsx (module-singleton store + useSyncExternalStore + toast.success/.error/.dismiss + Tailwind colored-border cards bottom-right + per-toast close + aria-live/role attrs + SSR-safe typeof window guard), layout.tsx mounts <Toaster /> once after children, hook wires in useGroups (create/rename/delete), useGroupDetail (bulkAddContacts with 3-branch copy), useWaState (disconnect), useJobs (cancelJob); npx tsc --noEmit exit 0; curl / + /dashboard both 200 | log: docs/.support/conversations/2026-05-18T212907Z-resolving_agent-iter80.md
+- 2026-05-18T21:34:00Z iter81 verification_agent -> ticketing | TKT-0008 VERIFIED + committed: seven proofs -- Toaster.tsx 2814b with useSyncExternalStore+toast.{success,error,dismiss}+Toaster default, layout.tsx mounts after children, all 4 hooks import+fire toast at correct lines, tsc exit 0, zero non-ASCII across all 5 edited files, curl / + /dashboard + /groups all 200, SSR-safe typeof window guard at line 38 + getServerSnapshot returns [] at line 61 | log: docs/.support/conversations/2026-05-18T213351Z-verification_agent-iter81.md

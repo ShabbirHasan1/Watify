@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
+import { toast } from "@/components/Toaster";
 import {
   groups,
   type BulkContactsResponse,
@@ -40,6 +41,15 @@ export function useGroupDetail(id: number | null) {
     const res = await groups.bulkAddContacts(id, contacts);
     await mutate(k);
     await mutate("/api/groups");
+    const skipped = res.skipped.length;
+    const inserted = res.inserted.length;
+    if (inserted > 0 && skipped === 0) {
+      toast.success(`Added ${inserted} contact${inserted === 1 ? "" : "s"}`);
+    } else if (inserted > 0 && skipped > 0) {
+      toast.success(`Added ${inserted}, skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}`);
+    } else if (skipped > 0) {
+      toast.error(`No new contacts; ${skipped} duplicate${skipped === 1 ? "" : "s"} skipped`);
+    }
     return res;
   }
 

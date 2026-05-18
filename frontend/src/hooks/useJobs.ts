@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR, { mutate } from "swr";
+import { toast } from "@/components/Toaster";
 import {
   jobs,
   type SendJobDetail,
@@ -27,6 +28,7 @@ export function useJobs() {
     await jobs.cancel(id);
     await mutate(LIST_KEY);
     await mutate(`/api/jobs/${id}`);
+    toast.success("Job cancelled");
   }
 
   return {
