@@ -51,6 +51,7 @@ target/
 *.pyd
 *.dll
 
-# Logs from dev servers (loop-managed)
+# Logs and runtime state from dev servers (loop-managed)
 docs/.support/logs/*.log
+docs/.support/logs/*.pid
 !docs/.support/logs/.gitkeep

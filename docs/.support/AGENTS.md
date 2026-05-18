@@ -95,7 +95,21 @@ Relevant excerpts.
 (append-only — Resolving Agent and Verification Agent update this)
 ```
 
-**Done when**: Either all features pass and no new tickets are filed (advance to `phase: done`), or N>0 tickets are open (advance to `phase: resolving`).
+**Security audit pass (every Ticketing iteration)**:
+The Ticketing Agent is also the security gate. Before declaring no new tickets, sweep the working tree against `REQUIREMENTS.md` §"Security & secrets" and file a P0/P1 ticket for each finding:
+
+- Grep for hardcoded secrets, tokens, API keys, real phone numbers, or `localhost`/IP addresses outside of `.env*` and code that explicitly reads env.
+- Confirm `backend/.env` and `frontend/.env.local` are present in `.gitignore` and NOT in `git ls-files`.
+- Confirm `.env.example` files exist for every env file and list every variable.
+- Confirm all API handlers use Pydantic models (no raw `dict` bodies) and that DB writes go through SQLModel (no f-string SQL).
+- Confirm CORS is exactly `http://localhost:3000` (no `*`, no wildcards) and the backend binds 127.0.0.1.
+- Confirm React code contains no `dangerouslySetInnerHTML` and no `eval`.
+- Confirm phone numbers are redacted in backend logs and in conversation logs (no `\b\d{10,15}\b` matches outside test fixtures).
+- Confirm `whatsapp.db`, `app.db`, `*.env` are present in `.gitignore` and absent from `git ls-files`.
+
+Each finding becomes a ticket with `area: security`, priority P0 for active leaks (real secret committed) and P1 for missing controls (no input validation on a new endpoint).
+
+**Done when**: Either all features pass, the security pass is clean, and no new tickets are filed (advance to `phase: done`), or N>0 tickets are open (advance to `phase: resolving`).
 
 ---
 
@@ -130,7 +144,19 @@ Relevant excerpts.
   - Append a "Verification failed" entry to Resolution history with what was observed.
   - Advance to `phase: ticketing` so Ticketing Agent can re-triage with the new evidence.
 
-**Commit & push rule**: Only the Verification Agent commits. Only verified tickets are committed. Never commit `whatsapp.db`, `.env`, or anything in `.gitignore`.
+**Commit & push rule (ticket fixes)**: Only the Verification Agent commits ticket fixes. Never commit `whatsapp.db`, `.env`, or anything in `.gitignore`.
+
+---
+
+## Commit policy (all agents)
+
+To keep the GitHub history in sync with the loop's actual progress, agents commit at the end of any iteration that produces real code:
+
+- **Backend Agent / Frontend Agent (scaffold phase)** — after a PLAN item's acceptance check passes, stage just the files that item touched and commit with message `feat(<ID>): <one-line summary>` (e.g. `feat(B-02): SQLModel data layer + smoke test`). Then `git push origin main`.
+- **Verification Agent (ticket fix)** — `fix(TKT-NNNN): <title>` as already specified above. Then push.
+- **Planning Agent / Ticketing Agent / Resolving Agent** — do NOT commit. Their output is orchestration state (`.support/`) and unverified code; it ships with the next agent's commit.
+
+Orchestration files in `docs/.support/` (PIPELINE.md, PLAN.md, conversations/, tickets/) are committed *alongside* whichever feat/fix commit they relate to — they are the trail of how that change was made.
 
 ---
 
