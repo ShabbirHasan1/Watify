@@ -3,9 +3,18 @@
 import Link from "next/link";
 import EmptyState from "@/components/EmptyState";
 import JobRow from "@/components/history/JobRow";
+import RequireAuth from "@/components/RequireAuth";
 import { useJobs } from "@/hooks/useJobs";
 
 export default function HistoryPage() {
+  return (
+    <RequireAuth>
+      <HistoryInner />
+    </RequireAuth>
+  );
+}
+
+function HistoryInner() {
   const { list, isLoading, cancelJob } = useJobs();
 
   return (

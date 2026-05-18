@@ -2,12 +2,21 @@
 
 import { useMemo } from "react";
 import BackendStatus from "@/components/BackendStatus";
+import RequireAuth from "@/components/RequireAuth";
 import SoftCapBanner from "@/components/SoftCapBanner";
 import WhatsAppTile from "@/components/WhatsAppTile";
 import { useGroups } from "@/hooks/useGroups";
 import { useJobs } from "@/hooks/useJobs";
 
 export default function DashboardPage() {
+  return (
+    <RequireAuth>
+      <DashboardInner />
+    </RequireAuth>
+  );
+}
+
+function DashboardInner() {
   const { list: groups } = useGroups();
   const { list: jobs } = useJobs();
 

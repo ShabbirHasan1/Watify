@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import EmptyState from "@/components/EmptyState";
+import RequireAuth from "@/components/RequireAuth";
 import {
   ApiError,
   DEFAULT_MAX_DELAY_S,
@@ -26,6 +27,14 @@ function nowLocalIsoForInput(): string {
 }
 
 export default function SendPage() {
+  return (
+    <RequireAuth>
+      <SendInner />
+    </RequireAuth>
+  );
+}
+
+function SendInner() {
   const { list: groups, isLoading: groupsLoading } = useGroups();
   const { createSend } = useJobs();
 

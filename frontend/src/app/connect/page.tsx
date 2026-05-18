@@ -1,11 +1,20 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import RequireAuth from "@/components/RequireAuth";
 import { useWaState } from "@/hooks/useWaState";
 
 const AUTO_FLAG = "watify.autopair.started";
 
 export default function ConnectPage() {
+  return (
+    <RequireAuth>
+      <ConnectInner />
+    </RequireAuth>
+  );
+}
+
+function ConnectInner() {
   const { waState, isLoading, connect, disconnect } = useWaState();
   const [busy, setBusy] = useState(false);
   const autoStarted = useRef(false);

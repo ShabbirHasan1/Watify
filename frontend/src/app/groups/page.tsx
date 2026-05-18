@@ -3,11 +3,20 @@
 import { useEffect, useState } from "react";
 import BulkAddModal from "@/components/groups/BulkAddModal";
 import EmptyState from "@/components/EmptyState";
+import RequireAuth from "@/components/RequireAuth";
 import { ApiError, GROUP_MAX } from "@/lib/api";
 import { useGroupDetail } from "@/hooks/useGroupDetail";
 import { useGroups } from "@/hooks/useGroups";
 
 export default function GroupsPage() {
+  return (
+    <RequireAuth>
+      <GroupsInner />
+    </RequireAuth>
+  );
+}
+
+function GroupsInner() {
   const { list, isLoading, createGroup, deleteGroup } = useGroups();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [newName, setNewName] = useState("");

@@ -1,9 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ApiError, auth } from "@/lib/api";
+
+// TKT-0029: honor the `?next=` query param post-login, but only when
+// it is a same-origin path. Anything else (absolute URLs, protocol-
+// relative `//evil.com`, paths with `:` that browsers interpret as a
+// scheme, or non-strings) falls back to the safe default.
+function safeNextPath(raw: string | null): string {
+  const fallback = "/dashboard";
+  if (typeof raw !== "string") return fallback;
+  if (!raw.startsWith("/")) return fallback;     // must be a path
+  if (raw.startsWith("//")) return fallback;     // protocol-relative
+  if (raw.includes(":")) return fallback;        // would-be scheme
+  return raw;
+}
 
 type ErrorState =
   | null
@@ -26,6 +39,7 @@ function parseRetryAfter(body: unknown): number {
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -46,7 +60,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await auth.login(u, password);
-      router.push("/dashboard");
+      router.push(safeNextPath(searchParams.get("next")));
     } catch (e) {
       if (e instanceof ApiError) {
         if (e.status === 401) setErr({ kind: "invalid" });

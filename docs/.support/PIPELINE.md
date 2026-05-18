@@ -5,9 +5,9 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 ```yaml
 phase: ticketing
 agent: ticketing_agent
-iteration: 72
-last_updated: 2026-05-18T20:50:00Z
-last_conversation: docs/.support/conversations/2026-05-18T204945Z-verification_agent-iter72.md
+iteration: 75
+last_updated: 2026-05-18T21:05:00Z
+last_conversation: docs/.support/conversations/2026-05-18T210401Z-verification_agent-iter75.md
 servers:
   backend_running: true
   backend_pid: 20252
@@ -16,16 +16,17 @@ servers:
   frontend_pid: 42204
   frontend_url: http://localhost:3000
 tickets:
-  open: 10
+  open: 9
   inprogress: 0
   resolved: 0
-  verified: 24
+  verified: 25
 ticket_index:
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
   TKT-0025: verified P1 backend Auth middleware
   TKT-0026: verified P1 frontend /login + /register pages
   TKT-0027: verified P2 frontend Public hero page; move dashboard to /dashboard
   TKT-0028: verified P2 frontend Auth-aware TopNav
+  TKT-0029: verified P2 frontend Route guards
   TKT-0030: verified P1 infra install/install.sh + update.sh
   TKT-0034: verified P1 frontend apiFetch credentials include
   TKT-0027: open P2 frontend Public hero page; move dashboard to /dashboard
@@ -44,7 +45,14 @@ ticket_index:
 ```
 
 ## Next Action
-**Ticketing Agent** re-triages. Last v1.1 surface ticket remaining is **TKT-0029** (P2 frontend) -- route guards on `/dashboard`, `/connect`, `/groups`, `/send`, `/history`. Unauthed visitors on those URLs should redirect to `/login`. Pattern: a small `<RequireAuth>` component that reads `useAuth()` and `router.push("/login")` when `!isLoading && !user`; wrap each of the five page components. Alternative: a `(authed)` route group in Next.js App Router with a layout that does the redirect once. The Ticketing Agent should also run a security spot pass over the TopNav diff (logout button only POSTs to `/api/auth/logout`, no token reads, no localStorage; `signingOut` flag is local UI state).
+**Ticketing Agent** re-triages. The v1.1 milestone is complete (TKT-0024/0025/0026/0027/0028/0029/0030/0031/0034 all verified). Open queue is P2/P3 polish:
+- P2 backend: TKT-0032 (CSRF defense via X-Requested-With + Origin check) -- raises baseline security for any future browser-fetch path that doesn't go through apiFetch
+- P2 backend: TKT-0014 (pair-code mode alongside QR)
+- P2 frontend: TKT-0008 (global toaster)
+- P3 backend: TKT-0006 (test phone constant), TKT-0016 (paired vs ready state machine), TKT-0017 (JID helpers)
+- P3 frontend: TKT-0018 (SSE push of QR), TKT-0022 (job drawer cache drift), TKT-0033 (Next.js postcss XSS advisory)
+
+Suggested next Resolving target: **TKT-0032** (CSRF) -- the only P2 backend security item left, and a natural pairing with the auth gate just shipped. The Ticketing Agent should also run a brief security spot pass over the iter74 diff (RequireAuth, five page wraps, safeNextPath helper). The seven-case unit test of `safeNextPath` in iter75 already covered the open-redirect surface, so this should be a quick pass with no new tickets.
 
 ## History (latest only)
 - 2026-05-18T20:07:00Z iter63 verification_agent -> ticketing | TKT-0026 VERIFIED + committed c9835a8: eight proofs -- file presence (4 files), exports (`auth`/`AuthAck`/`MeResponse`), useAuth 401-as-null + shouldRetryOnError=false, zero non-ASCII chars (no emojis/icons), tsc --noEmit exit 0, curl /login + /register HTTP 200 with expected copy strings, Next.js compiled src_app_login_page_tsx_05e8nkp._.js chunk, backend endpoints behave per UI contract (auth/me 401, register 409 registration_closed, login bad-password 401 invalid_credentials) | log: docs/.support/conversations/2026-05-18T200607Z-verification_agent-iter63.md
@@ -56,4 +64,7 @@ ticket_index:
 - 2026-05-18T20:36:00Z iter69 verification_agent -> ticketing | TKT-0027 VERIFIED + committed 7918ee7: six proofs -- 5 files present (sizes 2965/2857/4951/5805/1278b), zero non-ASCII chars in any edited file, tsc --noEmit exit 0, dev-server curl / 200 (20565b, 7 hero copy strings) + /dashboard 200 (18447b, 4 dashboard markers) + /login + /register both 200, router.push("/dashboard") confirmed in login + register, TopNav links[0] href=/dashboard | log: docs/.support/conversations/2026-05-18T203528Z-verification_agent-iter69.md
 - 2026-05-18T20:40:14Z iter70 ticketing_agent -> resolving | iter68 diff security spot pass clean (no dangerouslySetInnerHTML/eval/localStorage/sessionStorage/document.cookie/hex secrets/console.log/external links across the 5 changed frontend files); counts unchanged open=11 verified=23; no new tickets; next: Resolving picks TKT-0028 (auth-aware TopNav driven by useAuth) | log: docs/.support/conversations/2026-05-18T204014Z-ticketing_agent-iter70.md
 - 2026-05-18T20:46:00Z iter71 resolving_agent -> verification | TKT-0028 RESOLVED: rewrote frontend/src/components/TopNav.tsx as a 95-line client component driven by useAuth(); three branches (isLoading=brand-only flex-1 spacer, user=brand+5-link nav+username+Logout, unauthed=brand+Sign in+Get started); Logout calls useAuth.logout() then router.push("/"); brand href dynamic /dashboard|/; signingOut local state disables button during round-trip; `npx tsc --noEmit` exit 0; curl / 200 with Watify+Sign in+Get started but NOT Dashboard (unauthed branch rendered) | log: docs/.support/conversations/2026-05-18T204502Z-resolving_agent-iter71.md
-- 2026-05-18T20:50:00Z iter72 verification_agent -> ticketing | TKT-0028 VERIFIED + committed: six proofs -- "use client"+useAuth import at TopNav.tsx:1/6, three branches at :41/:45/:79-85, logout wiring `logout()` then `router.push("/")` at :24-25, tsc --noEmit exit 0, non-ASCII char count 0, curl / 200 with Watify=1+Sign in=1+Get started=1 and Dashboard=0+>Connect<=0+Logout=0 (unauthed branch only) | log: docs/.support/conversations/2026-05-18T204945Z-verification_agent-iter72.md
+- 2026-05-18T20:50:00Z iter72 verification_agent -> ticketing | TKT-0028 VERIFIED + committed 8c82b24: six proofs -- "use client"+useAuth import at TopNav.tsx:1/6, three branches at :41/:45/:79-85, logout wiring `logout()` then `router.push("/")` at :24-25, tsc --noEmit exit 0, non-ASCII char count 0, curl / 200 with Watify=1+Sign in=1+Get started=1 and Dashboard=0+>Connect<=0+Logout=0 (unauthed branch only) | log: docs/.support/conversations/2026-05-18T204945Z-verification_agent-iter72.md
+- 2026-05-18T20:54:30Z iter73 ticketing_agent -> resolving | iter71 TopNav diff security spot pass clean (no dangerouslySetInnerHTML/eval/storage-API reads/console.log/hex secrets); confirmed TKT-0029 spec actionable -- client-side <RequireAuth> path explicitly approved by the spec; queued TKT-0029 with five page wraps + login next-param honoring; counts open=10 verified=24 | log: docs/.support/conversations/2026-05-18T205430Z-ticketing_agent-iter73.md
+- 2026-05-18T21:03:00Z iter74 resolving_agent -> verification | TKT-0029 RESOLVED: seven-file change set -- new components/RequireAuth.tsx (client guard with effect-driven router.replace to /login?next=encoded-pathname, Loading skeleton fallback), wrapped 5 authed pages (dashboard/connect/groups/send/history) by extracting *Inner components so the hooks only fire when authed, added safeNextPath open-redirect validator + useSearchParams to login (rejects null, non-/, //, and :); npx tsc --noEmit exit 0; curl /dashboard|/connect|/groups|/send|/history all 200 with Loading skeleton + flex-1 nav spacer (isLoading state) | log: docs/.support/conversations/2026-05-18T205916Z-resolving_agent-iter74.md
+- 2026-05-18T21:05:00Z iter75 verification_agent -> ticketing | TKT-0029 VERIFIED + committed: seven proofs -- RequireAuth uses useAuth+usePathname+useRouter (router.replace /login?next=), 5 authed pages wrapped (grep -l returns 5), login imports useSearchParams + has safeNextPath validator, 9-case node unit test of safeNextPath passes (null/empty/valid -> echo or fallback; //evil.com / javascript: / http:// / /a:b all -> /dashboard), tsc --noEmit exit 0, non-ASCII char 0, curl 5 authed routes all 200 with Loading skeleton; v1.1 milestone fully shipped | log: docs/.support/conversations/2026-05-18T210401Z-verification_agent-iter75.md
