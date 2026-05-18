@@ -74,6 +74,26 @@ export type Health = {
   ok: boolean;
   service: string;
   version: string;
+  app_fingerprint: string | null;
+};
+
+export type AuthAck = {
+  ok: true;
+  username: string;
+};
+
+export type MeResponse = {
+  username: string;
+  created_at: string;
+};
+
+export const auth = {
+  login: (username: string, password: string) =>
+    api.post<AuthAck>("/api/auth/login", { username, password }),
+  register: (username: string, password: string) =>
+    api.post<AuthAck>("/api/auth/register", { username, password }),
+  logout: () => api.post<{ ok: true }>("/api/auth/logout"),
+  me: () => api.get<MeResponse>("/api/auth/me"),
 };
 
 export type WaPhase = "disconnected" | "pairing" | "ready" | "error";
