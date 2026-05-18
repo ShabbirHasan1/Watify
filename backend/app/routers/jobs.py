@@ -4,13 +4,15 @@ from datetime import datetime, timezone
 from typing import Literal
 
 from apscheduler.triggers.date import DateTrigger
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field, field_validator
 from sqlmodel import Session, func, select
 
 from app.constants import DEFAULT_MAX_DELAY_S, DEFAULT_MIN_DELAY_S, MAX_DELAY_S
 from app.db import get_session
 from app.jid import redact_phone
+from app.limiter import limiter
+from app.settings import settings
 from app.models import (
     AttemptStatus,
     Contact,
@@ -127,7 +129,9 @@ def _job_to_read(
 
 
 @router.post("/api/send", response_model=SendJobRead, status_code=201)
+@limiter.limit(settings.rate_limit_send)
 def create_send(
+    request: Request,
     body: SendRequest,
     session: Session = Depends(get_session),
 ) -> SendJobRead:

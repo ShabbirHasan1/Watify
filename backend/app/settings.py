@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # auto-migrate any existing whatsapp.db once a key is provided).
     session_encryption_key: str | None = None
 
+    # TKT-0015: slowapi rate-limit strings for the three send endpoints.
+    # Format is slowapi's "N/period" (e.g. "5/minute", "100/hour"). The
+    # dashboard SoftCapBanner is a soft UX signal; these are the hard
+    # backend caps that stop a buggy loop from triggering a WhatsApp ban.
+    rate_limit_test_self: str = "15/minute"
+    rate_limit_test_to: str = "10/minute"
+    rate_limit_send: str = "5/minute"
+
 
 @lru_cache
 def get_settings() -> Settings:

@@ -4,10 +4,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
 from app.db import init_db
+from app.limiter import limiter, rate_limit_handler
 from app.logging_setup import configure as configure_logging
 from app.routers import groups, jobs, whatsapp
 from app.scheduler import shutdown as scheduler_shutdown
@@ -31,6 +33,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Watify", version=__version__, lifespan=lifespan)
+
+# TKT-0015: slowapi rate-limit on send endpoints. Wired here so the
+# limiter sees the FastAPI app early; route decorators in
+# routers/whatsapp.py and routers/jobs.py reference `app.limiter`.
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 
 app.add_middleware(
     CORSMiddleware,

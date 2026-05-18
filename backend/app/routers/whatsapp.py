@@ -1,9 +1,11 @@
 """WhatsApp connection + test-send endpoints under /api/wa."""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.jid import InvalidPhoneError, normalize_phone, redact_phone
+from app.limiter import limiter
+from app.settings import settings
 from app.whatsapp import WaSingleton
 
 router = APIRouter(prefix="/api/wa", tags=["whatsapp"])
@@ -70,14 +72,16 @@ def _require_ready() -> None:
 
 
 @router.post("/test/self", response_model=WaSendResult)
-def test_send_self(body: WaTestSelfRequest) -> WaSendResult:
+@limiter.limit(settings.rate_limit_test_self)
+def test_send_self(request: Request, body: WaTestSelfRequest) -> WaSendResult:
     _require_ready()
     WaSingleton.send_self(body.text)
     return WaSendResult(queued=True, target="self", phone_redacted=None)
 
 
 @router.post("/test/to", response_model=WaSendResult)
-def test_send_to(body: WaTestToRequest) -> WaSendResult:
+@limiter.limit(settings.rate_limit_test_to)
+def test_send_to(request: Request, body: WaTestToRequest) -> WaSendResult:
     _require_ready()
     try:
         phone = normalize_phone(body.phone)
