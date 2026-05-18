@@ -24,7 +24,7 @@ Source: `REQUIREMENTS.md`. Items are dependency-ordered top to bottom. The Backe
   - Phone normalization helper using wars JID normalization rules (digits only, optional `+`).
   - Acceptance: 21st contact insert returns 409; CRUD round-trips work via httpie.
 
-- **[ ] B-04** — Bulk upload endpoint.
+- **[x] B-04** — Bulk upload endpoint. *(done iter7)*
   - `POST /api/groups/{id}/contacts/bulk` accepts JSON `{"contacts": [{"name": "...", "phone": "..."}, ...]}` (max 20 entries per request).
   - All-or-nothing: if any row is invalid OR if adding the batch would push the group over 20, reject the whole batch with the offending indices listed.
   - Acceptance: valid batch inserts atomically; one bad row rejects the whole batch.

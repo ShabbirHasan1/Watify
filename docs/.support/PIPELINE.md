@@ -5,12 +5,12 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 ```yaml
 phase: scaffold           # planning | scaffold | backend | frontend | ticketing | resolving | verification | done
 agent: backend_agent      # which AGENTS.md role runs next
-iteration: 6
-last_updated: 2026-05-18T15:22:56Z
-last_conversation: docs/.support/conversations/2026-05-18T152256Z-backend_agent-iter6.md
+iteration: 7
+last_updated: 2026-05-18T15:29:16Z
+last_conversation: docs/.support/conversations/2026-05-18T152916Z-backend_agent-iter7.md
 servers:
   backend_running: true
-  backend_pid: 11132
+  backend_pid: 39988
   backend_url: http://localhost:8000
   frontend_running: true
   frontend_pid: 42204
@@ -23,18 +23,21 @@ tickets:
 ```
 
 ## Next Action
-Run the **Backend Agent** on PLAN item **B-04** — Bulk upload endpoint:
-- `POST /api/groups/{id}/contacts/bulk` body `{"contacts":[{"name","phone"},...]}` (max 20 entries).
-- All-or-nothing semantics: if any row's phone is invalid, OR if `existing_count + batch_size > 20`, reject the entire batch with `422` body `{"error":"bulk_rejected","reasons":[{"index":i,"reason":"..."}]}`.
-- On success: 201 with the list of inserted ContactRead.
-- Idempotency: skip rows whose phone matches an existing contact in this group (return them in a `skipped` array, not as errors).
-- Restart backend, smoke 3 cases: valid batch, batch containing one invalid row, batch that overflows the cap.
-- Mark B-04 `[x]`. Set `agent: frontend_agent` next (F-03 — Connect/pairing UI, depends on B-05 which we'll run after F-03 since pairing UI can mount with mocked state).
-
-  Actually: switch to **B-05** next (`wars` singleton + connect endpoints) so F-03 has a real backend to talk to in iter8. F-04 (groups UI + bulk) waits for B-04 to be wired through F-04.
-
-  Plan for iteration after B-04: `agent: backend_agent`, item: B-05.
-- Commit per new policy: `feat(B-04): bulk-add contacts with all-or-nothing validation`.
+Run the **Backend Agent** on PLAN item **B-05** — wars singleton + connection endpoints:
+- `cd backend && uv add wars` (if PyPI install fails, fall back to source build via maturin per wars.md; file I-04 ticket if so).
+- `app/whatsapp.py` — lazy thread-safe singleton (per wars.md §7) with `db_path="whatsapp.db"`.
+  - Internal state: `state: Literal["disconnected","pairing","ready","error"]`, `qr_data_url: str|None`, `owner_phone: str|None`, `last_error: str|None`.
+  - Wires `@wa.on_qr` → caches `qr_to_data_url(code)`; clears on connect.
+  - Wires `@wa.on_connected` → `state="ready"`, owner_phone resolved if possible.
+  - Wires `@wa.on_disconnect` → `state="disconnected"`.
+- `app/routers/whatsapp.py`:
+  - `POST /api/wa/connect` — starts connect in background thread, returns current state.
+  - `POST /api/wa/disconnect` — idempotent.
+  - `GET /api/wa/state` — `{state, qr_data_url, owner_phone}`.
+- Register router in `app/main.py`.
+- Acceptance: `/api/wa/state` returns `disconnected` initially; calling `/api/wa/connect` flips state to `pairing` and surfaces a non-null `qr_data_url` within ~5s.
+- Mark B-05 `[x]`. Set `agent: frontend_agent` next (F-03 — Connect / pairing UI).
+- Commit: `feat(B-05): wars singleton + WhatsApp connection endpoints`.
 
 ## History
 - 2026-05-18T00:00:00Z iter0 bootstrap -> planning | initial scaffold created by user | log: (none)
@@ -44,3 +47,4 @@ Run the **Backend Agent** on PLAN item **B-04** — Bulk upload endpoint:
 - 2026-05-18T15:13:09Z iter4 backend_agent -> scaffold | B-02 done: SQLModel data layer + init_db lifespan + smoke_db.py green; AGENTS.md commit policy loosened; security audit added | log: docs/.support/conversations/2026-05-18T151309Z-backend_agent-iter4.md
 - 2026-05-18T15:18:13Z iter5 frontend_agent -> scaffold | F-02 done: api.ts typed fetch + useHealth SWR + BackendStatus pill on Dashboard; useGroups deferred to F-04 | log: docs/.support/conversations/2026-05-18T151813Z-frontend_agent-iter5.md
 - 2026-05-18T15:22:56Z iter6 backend_agent -> scaffold | B-03 done: friend groups CRUD + 20-cap enforced (HTTP 409 group_full), phone normalizer, schemas; backend pid 11132 | log: docs/.support/conversations/2026-05-18T152256Z-backend_agent-iter6.md
+- 2026-05-18T15:29:16Z iter7 backend_agent -> scaffold | B-04 done: bulk-add contacts endpoint with all-or-nothing validation, dedupe, overflow guard; 5 curl cases verified; backend pid 39988 | log: docs/.support/conversations/2026-05-18T152916Z-backend_agent-iter7.md

@@ -14,6 +14,9 @@ from app.db import get_session
 from app.jid import InvalidPhoneError, normalize_phone
 from app.models import Contact, FriendGroup
 from app.schemas import (
+    BulkContactsRequest,
+    BulkContactsResponse,
+    BulkRejectedReason,
     ContactCreate,
     ContactRead,
     FriendGroupCreate,
@@ -175,6 +178,111 @@ def add_contact(
         phone_e164=contact.phone_e164,
         created_at=contact.created_at,
     )
+
+
+@router.post(
+    "/{group_id}/contacts/bulk",
+    response_model=BulkContactsResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def bulk_add_contacts(
+    group_id: int,
+    body: BulkContactsRequest,
+    session: Session = Depends(get_session),
+) -> BulkContactsResponse:
+    _get_group_or_404(session, group_id)
+
+    rejected: list[BulkRejectedReason] = []
+    normalized: list[tuple[int, str, str]] = []
+    for i, row in enumerate(body.contacts):
+        name = row.name.strip()
+        if not name:
+            rejected.append(BulkRejectedReason(index=i, reason="name_blank"))
+            continue
+        try:
+            phone = normalize_phone(row.phone)
+        except InvalidPhoneError as e:
+            rejected.append(BulkRejectedReason(index=i, reason=str(e)))
+            continue
+        normalized.append((i, name, phone))
+
+    if rejected:
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "bulk_rejected",
+                "reasons": [r.model_dump() for r in rejected],
+            },
+        )
+
+    existing_phones = {
+        c.phone_e164
+        for c in session.exec(
+            select(Contact).where(Contact.group_id == group_id)
+        ).all()
+    }
+
+    to_insert: list[tuple[int, str, str]] = []
+    duplicates: list[tuple[int, str, str]] = []
+    seen_in_batch: set[str] = set()
+    for i, name, phone in normalized:
+        if phone in existing_phones or phone in seen_in_batch:
+            duplicates.append((i, name, phone))
+            continue
+        seen_in_batch.add(phone)
+        to_insert.append((i, name, phone))
+
+    existing_count = _contact_count(session, group_id)
+    if existing_count + len(to_insert) > MAX_CONTACTS_PER_GROUP:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "group_full",
+                "max": MAX_CONTACTS_PER_GROUP,
+                "current": existing_count,
+                "would_add": len(to_insert),
+            },
+        )
+
+    inserted_models = [
+        Contact(group_id=group_id, name=name, phone_e164=phone)
+        for _, name, phone in to_insert
+    ]
+    session.add_all(inserted_models)
+    session.commit()
+    for c in inserted_models:
+        session.refresh(c)
+
+    inserted = [
+        ContactRead(
+            id=c.id,
+            group_id=c.group_id,
+            name=c.name,
+            phone_e164=c.phone_e164,
+            created_at=c.created_at,
+        )
+        for c in inserted_models
+    ]
+
+    skipped: list[ContactRead] = []
+    for _, name, phone in duplicates:
+        existing = session.exec(
+            select(Contact).where(
+                Contact.group_id == group_id, Contact.phone_e164 == phone
+            )
+        ).first()
+        if existing is not None:
+            skipped.append(
+                ContactRead(
+                    id=existing.id,
+                    group_id=existing.group_id,
+                    name=existing.name,
+                    phone_e164=existing.phone_e164,
+                    created_at=existing.created_at,
+                )
+            )
+
+    return BulkContactsResponse(inserted=inserted, skipped=skipped)
 
 
 @router.delete(

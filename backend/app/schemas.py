@@ -46,3 +46,17 @@ class ApiError(BaseModel):
     error: str
     detail: str | None = None
     max: int | None = None
+
+
+class BulkContactsRequest(BaseModel):
+    contacts: list[ContactCreate] = Field(min_length=1, max_length=20)
+
+
+class BulkRejectedReason(BaseModel):
+    index: int
+    reason: str
+
+
+class BulkContactsResponse(BaseModel):
+    inserted: list[ContactRead]
+    skipped: list[ContactRead]
