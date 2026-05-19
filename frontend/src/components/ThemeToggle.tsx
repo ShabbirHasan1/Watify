@@ -1,32 +1,30 @@
 "use client";
 
-// TKT-0043: cycle Light -> Dark -> System -> Light. Persists in
-// localStorage under `watify.theme`. Applies the `dark` class on
-// <html> based on the stored preference. Initial render reads the
-// inline-set class so there is no flash (the inline script in
-// layout.tsx sets the class before React hydrates).
+// TKT-0057: two themes only -- light and dark. Dark is the default
+// when no preference is stored. The choice is persisted in
+// localStorage under `watify.theme`. The inline script in layout.tsx
+// sets the class on <html> before React hydrates, so there is no
+// flash of light theme on first paint.
 
 import { useEffect, useState } from "react";
 
-type Theme = "light" | "dark" | "system";
+type Theme = "light" | "dark";
 const KEY = "watify.theme";
 
 function readTheme(): Theme {
-  if (typeof window === "undefined") return "system";
+  if (typeof window === "undefined") return "dark";
   const v = window.localStorage.getItem(KEY);
-  return v === "light" || v === "dark" || v === "system" ? v : "system";
+  return v === "light" ? "light" : "dark";
 }
 
 function apply(theme: Theme) {
   if (typeof window === "undefined") return;
   const root = window.document.documentElement;
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const dark = theme === "dark" || (theme === "system" && prefersDark);
-  root.classList.toggle("dark", dark);
+  root.classList.toggle("dark", theme === "dark");
 }
 
 export default function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     setTheme(readTheme());
@@ -34,39 +32,28 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     apply(theme);
-    if (theme !== "system") return;
-    // While in system mode, re-apply when the OS preference flips.
-    const m = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => apply("system");
-    m.addEventListener("change", onChange);
-    return () => m.removeEventListener("change", onChange);
   }, [theme]);
 
-  function cycle() {
-    const next: Theme = theme === "light" ? "dark" : theme === "dark" ? "system" : "light";
+  function toggle() {
+    const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(KEY, next);
     }
   }
 
-  const label = theme === "light" ? "Light" : theme === "dark" ? "Dark" : "System";
+  const label = theme === "light" ? "Light" : "Dark";
+  const nextLabel = theme === "light" ? "Dark" : "Light";
 
   return (
     <button
       type="button"
-      onClick={cycle}
-      aria-label={`Theme: ${label}. Click to change.`}
-      title={`Theme: ${label}`}
+      onClick={toggle}
+      aria-label={`Theme: ${label}. Click to switch to ${nextLabel}.`}
+      title={`Theme: ${label}. Click to switch to ${nextLabel}.`}
       className="p-2 rounded-md text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition"
     >
-      {theme === "light" ? (
-        <SunIcon />
-      ) : theme === "dark" ? (
-        <MoonIcon />
-      ) : (
-        <SystemIcon />
-      )}
+      {theme === "light" ? <SunIcon /> : <MoonIcon />}
       <span className="sr-only">{label}</span>
     </button>
   );
@@ -114,27 +101,6 @@ function MoonIcon() {
       aria-hidden="true"
     >
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-    </svg>
-  );
-}
-
-function SystemIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="2" y="3" width="20" height="14" rx="2" />
-      <line x1="8" y1="21" x2="16" y2="21" />
-      <line x1="12" y1="17" x2="12" y2="21" />
     </svg>
   );
 }

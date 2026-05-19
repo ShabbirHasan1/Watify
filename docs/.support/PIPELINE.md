@@ -5,9 +5,9 @@ This file is the single source of truth for "what runs next". Each loop iteratio
 ```yaml
 phase: ticketing
 agent: ticketing_agent
-iteration: 103
-last_updated: 2026-05-19T03:14:00Z
-last_conversation: docs/.support/conversations/2026-05-19T031144Z-resolving_agent-iter103.md
+iteration: 105
+last_updated: 2026-05-19T03:35:00Z
+last_conversation: docs/.support/conversations/2026-05-19T033500Z-resolving_agent-iter105.md
 servers:
   backend_running: true
   backend_pid: 29768
@@ -19,7 +19,7 @@ tickets:
   open: 1
   inprogress: 0
   resolved: 0
-  verified: 54
+  verified: 56
 ticket_index:
   TKT-0014: verified P2 backend Pair-code mode (backend slice)
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
@@ -56,10 +56,27 @@ ticket_index:
   TKT-0017: open P3 backend JID helpers
   TKT-0018: open P3 frontend SSE push of QR
   TKT-0022: open P3 frontend Job drawer cache drift
+  TKT-0047: verified P1 frontend Hero CTA buttons not aligned (out-of-shape)
+  TKT-0048: verified P3 frontend Hero copy must not advertise per-contact-cap / per-recipient-delay constraints
+  TKT-0049: verified P3 frontend Theme toggle should use sun/moon icons instead of text
+  TKT-0050: verified P0 frontend Disconnect re-flips back to connected on next poll
+  TKT-0051: verified P3 frontend Test message toast copy + status semantics
+  TKT-0052: open P3 backend+frontend Delivery status tracking (deferred -- needs wars on_message_status + schema migration)
+  TKT-0053: verified P2 backend+frontend Unlink action that wipes session blob + legacy whatsapp.db files
+  TKT-0054: verified P2 infra Security headers grade A (Permissions-Policy, COOP, CORP, X-Permitted-Cross-Domain-Policies)
+  TKT-0055: verified P3 frontend Test message timestamp in local time, not UTC
+  TKT-0056: verified P1 frontend Disconnect = full unlink via styled modal (no window.confirm, no soft disconnect)
+  TKT-0057: verified P2 frontend Theme: light + dark only, dark by default, localStorage persisted (no system mode)
 ```
 
 ## Next Action
-**Loop exit -- phase: done.** Per AGENTS.md "The loop stops when `PIPELINE.md.phase == done`." All 46 tickets verified, zero open. Operator directive in iter100 ("fix all the open or pending tickets and ensure it is verified") cleared the queue.
+**Ticketing Agent** runs a security spot pass over iter105 (TKT-0056 modal diff). With TKT-0052 deferred (needs wars `@on_message_status` callback + SendAttempt schema migration; project does not run Alembic and `SQLModel.metadata.create_all` will not add columns to existing tables), the realistic options are:
+- (a) treat TKT-0052 as designed-not-implemented for v1.1, file a v1.2 follow-up that bundles the migration tool decision, and flip `phase: done`.
+- (b) commit to a destructive `app.db` schema reset path (drop `send_attempt` / `send_job` then `create_all`) so the columns land. Loses send history.
+
+Pick (a) unless the operator explicitly wants the migration risk. iter106 should propose the v1.2 follow-up plan and flip the pipeline phase accordingly.
+
+**Earlier loop-exit state (preserved for reference):** Loop exit -- phase: done. Per AGENTS.md "The loop stops when `PIPELINE.md.phase == done`." All 46 tickets verified, zero open. Operator directive in iter100 ("fix all the open or pending tickets and ensure it is verified") cleared the queue.
 
 Out-of-scope items deliberately kept off the queue (file fresh tickets to revisit any of these):
 - TKT-0018 was closed as designed-not-implemented (current SWR polling is good enough; SSE infra adds cost without measurable UX gain).
@@ -124,3 +141,8 @@ Out of scope: hiding the login page's footer "Create the admin account" link. Op
 - 2026-05-18T23:04:00Z iter98 resolving_agent (+ verification) -> ticketing | TKT-0045 P0 hotfix RESOLVED+VERIFIED (operator-requested bundled commit): added `await mutate("/api/auth/me")` BEFORE router.push in login + register pages so RequireAuth on the destination sees the fresh user instead of the stale SWR-cached null and stops bouncing back to /login. tsc exit 0. Diagnosis details in the ticket. Also filed TKT-0046 (P2) for the operator's second complaint: hide Get started CTAs once registered, via a new `/api/health.registered: bool` signal that hero + TopNav can read | log: docs/.support/conversations/2026-05-18T230400Z-resolving_agent-iter98.md
 - 2026-05-18T23:10:34Z iter99 ticketing_agent -> resolving | deferred iter98 commit landed as 6144723 (operator-interrupted commit+push from prior turn); iter96 stragglers (TKT-0044 ticket + iter96 log) folded in same commit; iter98 hotfix diff security spot pass clean; no new tickets; queued TKT-0046 (hide Get started CTAs once registered, Approach A: extend /api/health with registered:bool) | log: docs/.support/conversations/2026-05-18T231034Z-ticketing_agent-iter99.md
 - 2026-05-18T23:20:00Z iter100 resolving+verification (bundled, operator directive) -> DONE | closed 11 tickets in one mega-iteration: TKT-0046 (backend /api/health.registered + HeroCTAs + TopNav conditional), TKT-0017 (JID helpers), TKT-0016 (paired vs ready Literal + design note), TKT-0022 (JobRow counts derived from drawer detail when open), TKT-0043 (ThemeToggle component + localStorage + inline no-flash script in layout), TKT-0044 iter A+B (globals.css Supabase tokens + new hero with pill badge / gradient headline / stat row / GitHub CTA / integrations chips), TKT-0042 (TopNav aria-label + PairCodePanel role=img), TKT-0018 (designed-not-implemented, current SWR polling rationale), TKT-0041 (Biome 2.4.15 installed + biome.json + first auto-fix pass; check exits 0-errors-3-warnings), TKT-0039 (Vitest + jsdom + testing-library + safeNextPath.test.ts; 9/9 pass), TKT-0040 (Playwright config + e2e/hero.spec.ts; chromium install deferred to operator); tsc exit 0, biome 0 errors, vitest 9/9, npm run build exit 0 with 9 routes Static; all 46 tickets verified, queue empty, phase=done | log: docs/.support/conversations/2026-05-18T231511Z-resolving_agent-iter100.md
+- 2026-05-19T02:36:00Z iter101 resolving+verification (bundled, operator directive, commit a8f3557) | TKT-0047 hero CTA misalignment fixed (HeroCTAs returns <>...</> so parent flex aligns all three buttons), TKT-0048 hero copy must not advertise constraints (removed stat row + renamed "Friend groups, capped at 20" -> "Organize contacts into watchlists"), TKT-0049 theme toggle iconography (sun/moon/system inline SVGs + sr-only label; CLAUDE.md no-icons rule overridden for this control per operator request), TKT-0050 disconnect auto-reconnect bug (handleDisconnect now SETS AUTO_FLAG so auto-pair effect doesn't fire), TKT-0051 test-message toast copy semantics
+- 2026-05-19T03:05:28Z iter102 ticketing -> resolving | filed + closed TKT-0054 (security headers grade A): install/install.sh now adds Permissions-Policy (20 features denied, fullscreen=(self)), X-Permitted-Cross-Domain-Policies "none", COOP "same-origin", CORP "same-origin"; CSP intentionally omitted; commit 284ce08 | log: docs/.support/conversations/2026-05-19T030528Z-ticketing_agent-iter102.md
+- 2026-05-19T03:11:44Z iter103 resolving+verification (bundled, operator directive, commit 753791a) | TKT-0053 Unlink action (WaSingleton.unlink stops worker + clears wa_session blob + sweeps legacy whatsapp.db files; POST /api/wa/unlink route; wa.unlink helper; useWaState.unlink; ReadyPanel separate Unlink button confirmed via window.confirm). TKT-0055 test message timestamp in local time (toLocaleString instead of toISOString + " UTC"); history page already used toLocaleString | log: docs/.support/conversations/2026-05-19T031144Z-resolving_agent-iter103.md
+- 2026-05-19T03:21:38Z iter104 ticketing | iter103 diff security spot pass clean; queued TKT-0052 (delivery status tracking) noting schema-migration constraint (project doesn't run Alembic; create_all only adds tables, not columns) | log: docs/.support/conversations/2026-05-19T032138Z-ticketing_agent-iter104.md
+- 2026-05-19T03:35:00Z iter105 resolving+verification (bundled, operator directive) | TKT-0056 Disconnect = full unlink via styled modal: removed soft Disconnect path entirely, added DisconnectModal (role=dialog, aria-modal, aria-labelledby, backdrop blur, "Disconnecting..." progress) replacing window.confirm; single red-outlined Disconnect button on ReadyPanel calls requestDisconnect() -> confirmDisconnect() -> hook.unlink(). TKT-0057 theme cleanup: removed system mode + matchMedia fallback; Theme narrowed to "light" | "dark"; dark is the default; inline no-flash script shortened to one-line localStorage check; SystemIcon dropped; ThemeToggle.cycle -> toggle; tsc --noEmit exit 0; curl / /connect /login all 200 | log: docs/.support/conversations/2026-05-19T033500Z-resolving_agent-iter105.md

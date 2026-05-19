@@ -19,11 +19,11 @@ export const metadata: Metadata = {
   description: "Single-user WhatsApp notification service",
 };
 
-// TKT-0044 iter A: inline theme-set script runs before React hydrates,
-// so the dark class is on <html> from the first paint -- no flash of
-// light theme. Reads localStorage `watify.theme` (TKT-0043) and falls
-// back to the OS preference.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('watify.theme');if(t!=='light'&&t!=='dark'&&t!=='system')t='system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){document.documentElement.classList.add('dark');}})();`;
+// TKT-0057: two themes only (light + dark) with dark as the default.
+// Inline script runs before React hydrates so the dark class is on
+// <html> from the first paint -- no flash. Anything other than the
+// string "light" in localStorage resolves to dark.
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('watify.theme');document.documentElement.classList.toggle('dark',t!=='light');}catch(e){document.documentElement.classList.add('dark');}})();`;
 
 export default function RootLayout({
   children,

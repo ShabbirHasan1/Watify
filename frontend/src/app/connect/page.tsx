@@ -20,9 +20,13 @@ export default function ConnectPage() {
 type Mode = "qr" | "code";
 
 function ConnectInner() {
-  const { waState, isLoading, connect, disconnect, unlink } = useWaState();
+  const { waState, isLoading, connect, unlink } = useWaState();
   const [busy, setBusy] = useState(false);
   const autoStarted = useRef(false);
+  // TKT-0056: confirm-unlink modal state. Replaces window.confirm so
+  // the operator gets a styled, "Unlinking..." progress signal.
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [unlinking, setUnlinking] = useState(false);
   // TKT-0035: pair-code mode. Local-only state; refreshing the page
   // resets back to QR mode, which mirrors the legacy behavior.
   const [mode, setMode] = useState<Mode>("qr");
@@ -63,35 +67,27 @@ function ConnectInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [waState?.state]);
 
-  async function handleDisconnect() {
-    // TKT-0050: keep AUTO_FLAG set so the disconnected->auto-pair
-    // loop does not fire immediately after an explicit disconnect.
-    // The operator can still re-pair manually via "Start pairing".
-    autoStarted.current = true;
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(AUTO_FLAG, "1");
-    }
-    await disconnect();
+  // TKT-0056: a single Disconnect button now performs the full
+  // unlink (session wipe). The modal asks for confirmation; the
+  // operator can no longer accidentally soft-disconnect.
+  function requestDisconnect() {
+    setConfirmOpen(true);
   }
 
-  async function handleUnlink() {
-    // TKT-0053: full unlink. confirm() is intentionally simple; a
-    // proper modal can ship in a follow-on if anyone asks.
-    if (typeof window !== "undefined") {
-      const ok = window.confirm(
-        "Unlink this device? The next pairing will require scanning a fresh QR / typing a new pair code."
-      );
-      if (!ok) return;
-    }
+  async function confirmDisconnect() {
+    setUnlinking(true);
     autoStarted.current = true;
     if (typeof window !== "undefined") {
       sessionStorage.setItem(AUTO_FLAG, "1");
     }
     try {
       await unlink();
+      setConfirmOpen(false);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "unlink failed";
+      const msg = e instanceof Error ? e.message : "disconnect failed";
       toast.error(msg);
+    } finally {
+      setUnlinking(false);
     }
   }
 
@@ -204,14 +200,75 @@ function ConnectInner() {
       {waState?.state === "ready" ? (
         <ReadyPanel
           ownerPhone={waState.owner_phone}
-          onDisconnect={() => handleDisconnect()}
-          onUnlink={() => handleUnlink()}
+          onDisconnect={() => requestDisconnect()}
         />
       ) : null}
 
       {waState?.state === "error" ? (
         <ErrorPanel message={waState.last_error} onRetry={() => handleManualConnect()} />
       ) : null}
+
+      <DisconnectModal
+        open={confirmOpen}
+        unlinking={unlinking}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => confirmDisconnect()}
+      />
+    </div>
+  );
+}
+
+function DisconnectModal({
+  open,
+  unlinking,
+  onCancel,
+  onConfirm,
+}: {
+  open: boolean;
+  unlinking: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="disconnect-title"
+    >
+      <div className="w-full max-w-sm rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl">
+        <div className="px-5 pt-5 pb-3">
+          <h2
+            id="disconnect-title"
+            className="text-base font-semibold text-zinc-900 dark:text-zinc-100"
+          >
+            Disconnect WhatsApp?
+          </h2>
+          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+            This wipes the saved session permanently. The next pairing will require scanning a fresh QR
+            or entering a new pair code on your phone.
+          </p>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-zinc-200 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={unlinking}
+            className="rounded-md px-3 py-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={unlinking}
+            className="rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {unlinking ? "Disconnecting..." : "Disconnect"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -408,11 +465,9 @@ function PairingPanel({
 function ReadyPanel({
   ownerPhone,
   onDisconnect,
-  onUnlink,
 }: {
   ownerPhone: string | null;
   onDisconnect: () => void;
-  onUnlink: () => void;
 }) {
   // Test-message state. The button sends a small canary to self via
   // /api/wa/test/self (backend rate-limited 15/min). Result surfaces
@@ -472,17 +527,10 @@ function ReadyPanel({
           <button
             type="button"
             onClick={onDisconnect}
-            className="rounded-md border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-800"
+            className="rounded-md border border-red-300 dark:border-red-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-zinc-800"
+            title="Disconnect WhatsApp and wipe the saved session. Next pairing requires a fresh QR / pair-code."
           >
             Disconnect
-          </button>
-          <button
-            type="button"
-            onClick={onUnlink}
-            className="rounded-md border border-red-300 dark:border-red-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-zinc-800"
-            title="Wipe the saved session. Next pairing requires a fresh QR / pair-code."
-          >
-            Unlink
           </button>
         </div>
       </div>
