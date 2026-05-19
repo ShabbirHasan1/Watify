@@ -398,11 +398,18 @@ server {
     client_max_body_size 10M;
     limit_conn watify_conn 50;
 
-    # Security headers
+    # Security headers (TKT-0054: aim for securityheaders.com grade A;
+    # CSP intentionally omitted because Next.js inlines style + we use
+    # a theme-init dangerouslySetInnerHTML script that would need a
+    # per-request nonce -- file a follow-on ticket if CSP is wanted).
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "accelerometer=(), autoplay=(), camera=(), clipboard-read=(), display-capture=(), encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Cross-Origin-Resource-Policy "same-origin" always;
 
     gzip on;
     gzip_proxied any;

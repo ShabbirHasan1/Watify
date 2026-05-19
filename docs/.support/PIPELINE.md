@@ -3,11 +3,11 @@
 This file is the single source of truth for "what runs next". Each loop iteration reads this, executes one chunk as the named agent, then updates this file.
 
 ```yaml
-phase: ticketing
-agent: ticketing_agent
-iteration: 101
-last_updated: 2026-05-19T03:11:00Z
-last_conversation: docs/.support/tickets/TKT-0047-hero-cta-misalignment.md
+phase: resolving
+agent: resolving_agent
+iteration: 102
+last_updated: 2026-05-19T03:05:28Z
+last_conversation: docs/.support/conversations/2026-05-19T030528Z-ticketing_agent-iter102.md
 servers:
   backend_running: true
   backend_pid: 29768
@@ -19,7 +19,7 @@ tickets:
   open: 2
   inprogress: 0
   resolved: 0
-  verified: 51
+  verified: 52
 ticket_index:
   TKT-0014: verified P2 backend Pair-code mode (backend slice)
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits
