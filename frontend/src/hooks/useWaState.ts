@@ -32,6 +32,15 @@ export function useWaState() {
     toast.success("WhatsApp disconnected");
   }
 
+  async function unlink() {
+    // TKT-0053: full session wipe. Backend tears down the worker,
+    // clears the encrypted blob, sweeps legacy whatsapp.db files,
+    // and returns a fresh disconnected state.
+    const next = await wa.unlink();
+    await mutate(KEY, next, { revalidate: false });
+    toast.success("Device unlinked. Session wiped.");
+  }
+
   return {
     waState: data,
     isLoading,
@@ -39,6 +48,7 @@ export function useWaState() {
     error,
     connect,
     disconnect,
+    unlink,
     refresh: () => mutate(KEY),
   };
 }

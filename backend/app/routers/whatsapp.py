@@ -93,6 +93,16 @@ def disconnect() -> WaState:
     return _snapshot_to_dto()
 
 
+@router.post("/unlink", response_model=WaState)
+def unlink() -> WaState:
+    """TKT-0053: full unlink. Disconnect runtime + wipe the encrypted
+    session blob + sweep legacy whatsapp.db files. Next connect()
+    starts fresh and requires re-scanning the QR / typing a new
+    pair-code."""
+    WaSingleton.unlink()
+    return _snapshot_to_dto()
+
+
 def _require_ready() -> None:
     snap = WaSingleton.snapshot()
     if snap.state != "ready":

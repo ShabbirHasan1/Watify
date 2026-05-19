@@ -3,11 +3,11 @@
 This file is the single source of truth for "what runs next". Each loop iteration reads this, executes one chunk as the named agent, then updates this file.
 
 ```yaml
-phase: resolving
-agent: resolving_agent
-iteration: 102
-last_updated: 2026-05-19T03:05:28Z
-last_conversation: docs/.support/conversations/2026-05-19T030528Z-ticketing_agent-iter102.md
+phase: ticketing
+agent: ticketing_agent
+iteration: 103
+last_updated: 2026-05-19T03:14:00Z
+last_conversation: docs/.support/conversations/2026-05-19T031144Z-resolving_agent-iter103.md
 servers:
   backend_running: true
   backend_pid: 29768
@@ -16,10 +16,10 @@ servers:
   frontend_pid: 4664
   frontend_url: http://localhost:3000
 tickets:
-  open: 2
+  open: 1
   inprogress: 0
   resolved: 0
-  verified: 52
+  verified: 54
 ticket_index:
   TKT-0014: verified P2 backend Pair-code mode (backend slice)
   TKT-0024: verified P1 backend Auth endpoints + JWT cookies + auth rate limits

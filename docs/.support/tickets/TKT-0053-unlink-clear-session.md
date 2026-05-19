@@ -1,7 +1,7 @@
 ---
 id: TKT-0053
 title: Add Unlink action that wipes the encrypted wa_session row + legacy whatsapp.db files
-status: open
+status: verified
 priority: P2
 area: backend+frontend
 related_tickets: TKT-0011, TKT-0010

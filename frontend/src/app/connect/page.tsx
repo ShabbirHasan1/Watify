@@ -20,7 +20,7 @@ export default function ConnectPage() {
 type Mode = "qr" | "code";
 
 function ConnectInner() {
-  const { waState, isLoading, connect, disconnect } = useWaState();
+  const { waState, isLoading, connect, disconnect, unlink } = useWaState();
   const [busy, setBusy] = useState(false);
   const autoStarted = useRef(false);
   // TKT-0035: pair-code mode. Local-only state; refreshing the page
@@ -72,6 +72,27 @@ function ConnectInner() {
       sessionStorage.setItem(AUTO_FLAG, "1");
     }
     await disconnect();
+  }
+
+  async function handleUnlink() {
+    // TKT-0053: full unlink. confirm() is intentionally simple; a
+    // proper modal can ship in a follow-on if anyone asks.
+    if (typeof window !== "undefined") {
+      const ok = window.confirm(
+        "Unlink this device? The next pairing will require scanning a fresh QR / typing a new pair code."
+      );
+      if (!ok) return;
+    }
+    autoStarted.current = true;
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(AUTO_FLAG, "1");
+    }
+    try {
+      await unlink();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "unlink failed";
+      toast.error(msg);
+    }
   }
 
   async function handleManualConnect() {
@@ -181,7 +202,11 @@ function ConnectInner() {
       ) : null}
 
       {waState?.state === "ready" ? (
-        <ReadyPanel ownerPhone={waState.owner_phone} onDisconnect={() => handleDisconnect()} />
+        <ReadyPanel
+          ownerPhone={waState.owner_phone}
+          onDisconnect={() => handleDisconnect()}
+          onUnlink={() => handleUnlink()}
+        />
       ) : null}
 
       {waState?.state === "error" ? (
@@ -383,9 +408,11 @@ function PairingPanel({
 function ReadyPanel({
   ownerPhone,
   onDisconnect,
+  onUnlink,
 }: {
   ownerPhone: string | null;
   onDisconnect: () => void;
+  onUnlink: () => void;
 }) {
   // Test-message state. The button sends a small canary to self via
   // /api/wa/test/self (backend rate-limited 15/min). Result surfaces
@@ -397,9 +424,11 @@ function ReadyPanel({
   async function handleTestSelf() {
     setTesting(true);
     setTestResult(null);
-    const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
+    // TKT-0055: use local-time so the test message body reads in the
+    // operator's timezone, not UTC.
+    const ts = new Date().toLocaleString();
     try {
-      await wa.testSelf(`Watify test message at ${ts} UTC`);
+      await wa.testSelf(`Watify test message at ${ts}`);
       const msg = "Test message sent. Open WhatsApp on your phone to confirm receipt.";
       setTestResult({ ok: true, text: msg });
       toast.success("Test message sent to your own number");
@@ -446,6 +475,14 @@ function ReadyPanel({
             className="rounded-md border border-emerald-300 dark:border-emerald-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-800"
           >
             Disconnect
+          </button>
+          <button
+            type="button"
+            onClick={onUnlink}
+            className="rounded-md border border-red-300 dark:border-red-800 bg-white dark:bg-zinc-900 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-zinc-800"
+            title="Wipe the saved session. Next pairing requires a fresh QR / pair-code."
+          >
+            Unlink
           </button>
         </div>
       </div>

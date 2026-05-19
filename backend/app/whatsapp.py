@@ -597,9 +597,60 @@ class WaSingleton:
     def disconnect(cls) -> ClientState:
         # Optimistic state flip: wars.disconnect is idempotent, the worker
         # will catch up. UI doesn't have to wait one poll for the truth.
-        cls._set(state="disconnected", clear_qr=True, clear_pair_code=True)
+        cls._set(state="disconnected", clear_qr=True, clear_pair_code=True, owner_phone=None)
         if cls._worker is not None and cls._worker.is_alive():
             cls._cmd_q.put(("disconnect", None))
+        return cls.snapshot()
+
+    @classmethod
+    def unlink(cls) -> ClientState:
+        """TKT-0053: full session wipe. Stop the worker, clear the
+        encrypted wa_session row, sweep the legacy whatsapp.db files,
+        and reset the in-memory state so the next connect() builds a
+        fresh session and shows a fresh QR / pair code.
+
+        Disconnect is the runtime-only teardown; unlink is the
+        nuclear option that requires re-scanning the QR.
+        """
+        from sqlmodel import Session
+
+        from app import session_crypto as sc
+        from app.db import engine
+
+        log.info("wars: unlink requested -- tearing down worker and wiping session")
+
+        # 1. Tell the worker to stop (it will call wa.disconnect()).
+        if cls._worker is not None and cls._worker.is_alive():
+            cls._cmd_q.put(("stop", None))
+            cls._worker.join(timeout=5.0)
+        cls._worker = None
+        cls._ready_event.clear()
+
+        # 2. Drop the encrypted blob.
+        try:
+            with Session(engine) as s:
+                sc.clear_session(s)
+                s.commit()
+            log.info("wars: encrypted wa_session row cleared")
+        except Exception:  # noqa: BLE001
+            log.exception("wars: failed to clear wa_session row")
+
+        # 3. Sweep the legacy file-mode session, if any.
+        removed = cls._delete_legacy_wa_db_files()
+        if removed:
+            log.info("wars: legacy whatsapp.db files removed (%d)", removed)
+
+        # 4. Reset in-memory state. owner_phone clears so the dashboard
+        # does not show a stale "Linked as ..." line.
+        with cls._state_lock:
+            cls._state.state = "disconnected"
+            cls._state.qr_data_url = None
+            cls._state.pair_code = None
+            cls._state.owner_phone = None
+            cls._state.last_error = None
+            cls._state.last_event_at = datetime.now(timezone.utc).isoformat()
+            cls._last_qr_at = None
+
         return cls.snapshot()
 
     @classmethod

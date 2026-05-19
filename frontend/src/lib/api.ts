@@ -131,6 +131,9 @@ export const wa = {
   // path (operator types an 8-char code on the phone). Empty -> QR flow.
   connect: (phone?: string) => api.post<WaState>("/api/wa/connect", phone ? { phone } : {}),
   disconnect: () => api.post<WaState>("/api/wa/disconnect"),
+  // TKT-0053: full session wipe. Drops the encrypted wa_session blob
+  // and the legacy whatsapp.db files; next connect requires re-scan.
+  unlink: () => api.post<WaState>("/api/wa/unlink"),
   // Send a test message to the linked-device's own number to verify the
   // session can dispatch end-to-end. Rate-limited 15/min on the backend.
   testSelf: (text: string) => api.post<WaSendResult>("/api/wa/test/self", { text }),
