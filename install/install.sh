@@ -129,15 +129,27 @@ if ! command -v node >/dev/null 2>&1 || ! node -v | grep -q "^v20\."; then
 fi
 ok "Node.js $(node -v) installed"
 
-# uv (Astral) -- official installer + symlink to /usr/local/bin/uv
+# uv (Astral). The systemd unit uses ProtectHome=true, which hides
+# /root from the service even if /usr/local/bin/uv is a symlink into
+# /root/.local/bin. So we (a) try to install uv directly under
+# /usr/local/bin, and (b) idempotently copy the real binary to
+# /usr/local/bin/uv every run -- a stale symlink from an older
+# installer gets replaced with a real file.
 if ! command -v uv >/dev/null 2>&1; then
     curl -fsSL https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/bin sh >/dev/null 2>&1 || true
-    if [ ! -x /usr/local/bin/uv ] && [ -x /root/.local/bin/uv ]; then
-        ln -sf /root/.local/bin/uv /usr/local/bin/uv
-    fi
 fi
-command -v uv >/dev/null 2>&1 || die "uv install failed; install manually then re-run"
-ok "uv $(uv --version | awk '{print $2}') installed"
+UV_BIN="$(command -v uv || true)"
+if [ -z "$UV_BIN" ]; then
+    for cand in /usr/local/bin/uv /root/.local/bin/uv "$HOME/.local/bin/uv"; do
+        if [ -x "$cand" ]; then UV_BIN="$cand"; break; fi
+    done
+fi
+[ -n "$UV_BIN" ] && [ -x "$UV_BIN" ] || die "uv install failed; install manually then re-run"
+if [ ! -f /usr/local/bin/uv ] || [ -L /usr/local/bin/uv ]; then
+    cp -f "$UV_BIN" /usr/local/bin/uv
+    chmod 0755 /usr/local/bin/uv
+fi
+ok "uv $(/usr/local/bin/uv --version | awk '{print $2}') installed at /usr/local/bin/uv"
 
 # ------------------------------------------------------------------
 # Step 2: repository
@@ -545,3 +557,5 @@ echo
 echo "  First-time setup     : open https://$DOMAIN, hit 'Get started' on the"
 echo "                         hero, then create the single admin account."
 echo
+
+exit 0

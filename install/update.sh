@@ -34,6 +34,20 @@ ok "at $(git -C "$APP_ROOT" rev-parse --short HEAD)"
 
 step "backend deps"
 cd "$APP_ROOT/backend"
+# Self-heal: the systemd unit ExecStart pins /usr/local/bin/uv and runs
+# with ProtectHome=true, so a symlink into /root would fail at boot.
+# Make sure that path is a real binary every time we update.
+UV_BIN="$(command -v uv || true)"
+if [ -z "$UV_BIN" ]; then
+    for cand in /usr/local/bin/uv /root/.local/bin/uv "$HOME/.local/bin/uv"; do
+        if [ -x "$cand" ]; then UV_BIN="$cand"; break; fi
+    done
+fi
+[ -n "$UV_BIN" ] && [ -x "$UV_BIN" ] || die "uv not found on PATH -- re-run install.sh"
+if [ ! -f /usr/local/bin/uv ] || [ -L /usr/local/bin/uv ]; then
+    cp -f "$UV_BIN" /usr/local/bin/uv
+    chmod 0755 /usr/local/bin/uv
+fi
 uv sync --quiet
 ok "uv sync complete"
 
