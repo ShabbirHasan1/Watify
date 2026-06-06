@@ -152,5 +152,16 @@ WhatsApp may unlink the device or ban the account if send volume looks bot-like.
 - `docs/.support/AGENTS.md` -- how the multi-agent loop builds and maintains the app.
 - `docs/.support/PIPELINE.md` -- current phase and ticket queue.
 
-## Disclaimer
-Uses the unofficial `wars` WhatsApp client. Not affiliated with WhatsApp or Meta. Personal / low-volume use only.
+## License
+
+Released under the [MIT License](LICENSE).
+
+## Caution / Disclaimer
+
+This project relies on the [`wars`](https://pypi.org/project/wars/) Python library, which is a [PyO3](https://pyo3.rs/) wrapper around [oxidezap/whatsapp-rust](https://github.com/oxidezap/whatsapp-rust). It is an **unofficial, reverse-engineered** WhatsApp client.
+
+This project is not affiliated, associated, authorized, endorsed by, or in any way officially connected with WhatsApp or any of its subsidiaries or its affiliates. The official WhatsApp website can be found at [whatsapp.com](https://whatsapp.com). "WhatsApp" as well as related names, marks, emblems and images are registered trademarks of their respective owners.
+
+The maintainers of Watify do not in any way condone the use of this application in practices that violate the Terms of Service of WhatsApp. The maintainers of this application call upon the personal responsibility of its users to use this application in a fair way, as it is intended to be used. Use at your own discretion. Do not spam people with this. We discourage any stalkerware, bulk or automated messaging usage.
+
+Using an unofficial client carries a real risk that WhatsApp may unlink the device or ban the account. Watify is intended for **personal, low-volume** use only — see `docs/wars.md` for the practical risk note and soft-cap thresholds.
